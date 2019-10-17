@@ -4,53 +4,66 @@ using namespace datalog;
 
 int main() {
 
+    struct Int: RelationType<int> {
+    };
+    struct Int_Int: RelationType<int, int> {
+    };
+    struct String_Int: RelationType<string, int> {
+    };
+    struct String_Int_String: RelationType<string, int, string> {
+    };
     {
-        Relation<int> r1 { { { 1 } } };
-        Relation<int, int> r2 { { { 1, 2 } } };
-        Relation<string, int> r3 { { { "hello", 1 } } };
-        Relation<string, int> r4 { { { "hello", 1 }, { "world", 2 } } };
-        Relation<int, int> r5 { { { 1, 2 }, { 3, 4 } } };
-        Relation<string, int, string> r6 { { { "hello", 1, "world" }, { "world", 2, "hello" }, { "world", 3, "world" } } };
+        Relation<Int> r1 { { { 1 }, { 2 } } };
 
-        Relation<string, int> r7 = merge(r3, r4);
+        Relation<Int_Int> r2 { { { 1, 2 } } };
+        Relation<Int_Int> r3 { { { 1, 2 }, { 3, 4 } } };
+
+        Relation<String_Int> r4 { { { "hello", 1 } } };
+        Relation<String_Int> r5 { { { "hello", 1 }, { "world", 2 } } };
+
+        Relation<String_Int_String> r6 { { { "hello", 1, "world" }, { "world", 2, "hello" }, { "world", 3, "world" } } };
+
+        Relation<String_Int> r7 = merge(r4, r5);
     }
 
     {
-        Relation<Int> r2 { { { 1, Id { "2" } } } };
-        Relation<String, Int> r4 { { { { "hello" }, 1 }, { { "world" }, Id { "2" } } } };
-        Relation<String, Int, String> r6 { { { { "hello" }, 1, { Id { "3" } } }, { { "world" }, 2, { "hello" } }, { { Id { "4" } }, 3, { "world" } } } };
+        Atom<Int_Int> r1 { { 1, Symbol { "2" } } };
+        Atom<String_Int> r2 { { { "world" }, Symbol { "2" } } };
+        Atom<String_Int_String> r3 { { { "hello" }, 1, { Symbol { "3" } } } };
     }
 
     {
-        struct Adviser: Relation<String, String> {
-            using Relation<String, String>::Relation;
+        struct Adviser: RelationType<string, string> {
         };
-        Adviser advisers { { { { "Andrew Rice" }, { "Mistral Contrastin" } }, { { "Andy Hopper" }, { "Andrew Rice" } }, { { "Alan Mycroft" }, {
+        Relation<Adviser> advisers { { { { "Andrew Rice" }, { "Mistral Contrastin" } }, { { "Andy Hopper" }, { "Andrew Rice" } }, { { "Alan Mycroft" }, {
                 "Dominic Orchard" } }, { { "David Wheeler" }, { "Andy Hopper" } }, { { "Rod Burstall" }, { "Alan Mycroft" } }, { { "Robin Milner" }, {
                 "Alan Mycroft" } } } };
 
-        struct AcademicAncestor: Relation<String, String> {
-            using Relation<String, String>::Relation;
+        struct AcademicAncestor: RelationType<string, string> {
         };
 
         // Rule1
-        Atom<AcademicAncestor> head1 { { Id { "x" }, Id { "y" } } };
-        Atom<Adviser> clause1 { { Id { "x" }, Id { "y" } } };
-        Rule<Atom<AcademicAncestor>, Atom<Adviser>> rule1 { head1, { { clause1 } } };
+        Atom<AcademicAncestor> head1 { { Symbol { "x" }, Symbol { "y" } } };
+        Atom<Adviser> clause1 { { Symbol { "x" }, Symbol { "y" } } };
+        Rule<AcademicAncestor, Adviser> rule1 { head1, { { clause1 } } };
 
         // Rule2
-        Atom<AcademicAncestor> head2 { { Id { "x" }, Id { "z" } } };
-        Atom<Adviser> clause21 { { Id { "x" }, Id { "y" } } };
-        Atom<AcademicAncestor> clause22 { { Id { "y" }, Id { "z" } } };
-        Rule<Atom<AcademicAncestor>, Atom<Adviser>, Atom<AcademicAncestor>> rule2 { head2, { { clause21, clause22 } } };
+        Atom<AcademicAncestor> head2 { { Symbol { "x" }, Symbol { "z" } } };
+        Atom<Adviser> clause2 { { Symbol { "x" }, Symbol { "y" } } };
+        Atom<AcademicAncestor> clause3 { { Symbol { "y" }, Symbol { "z" } } };
+        Rule<AcademicAncestor, Adviser, AcademicAncestor> rule2 { head2, { { clause2, clause3 } } };
 
         // Query1
-        struct Query1: Relation<String> {
-            using Relation<String>::Relation;
+        struct Query1: RelationType<string> {
         };
-        Atom<Query1> head3 { { Id { "x" } } };
-        Atom<AcademicAncestor> clause31 { { { "Robin Milner" }, Id { "x" } } };
-        Atom<AcademicAncestor> clause32 { { Id { "x" }, { "Mistral Contrastin" } } };
-        Rule<Atom<Query1>, Atom<AcademicAncestor>> query1 { head3, { { clause31, clause32 } } };
+        Atom<Query1> head3 { { Symbol { "x" } } };
+        Atom<AcademicAncestor> clause4 { { { "Robin Milner" }, Symbol { "x" } } };
+        Atom<AcademicAncestor> clause5 { { Symbol { "x" }, { "Mistral Contrastin" } } };
+        Rule<Query1, AcademicAncestor> query1 { head3, { { clause4, clause5 } } };
+
+        Adviser::GroundType fact1{ { "Andrew Rice" }, { "Mistral Contrastin" } };
+        auto indexSequence = index_sequence_for<typename Adviser::GroundType>{};
+        //auto boundAtom = bind(clause1, fact1, indexSequence);
+
     }
 }

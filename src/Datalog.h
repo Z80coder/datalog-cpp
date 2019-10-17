@@ -5,94 +5,181 @@
 #include <set>
 #include <variant>
 #include <vector>
+#include <map>
 #include <limits>
 #include <cassert>
+#include <iostream>
 
 namespace datalog {
 
 using namespace std;
 
-struct Id {
-    const string value;
+struct Symbol {
+    string name;
 };
 
 template<typename T>
-struct Value {
+struct SymbolOrValue {
 
-    Value(const T& value) :
-            isVariable(false), value(value), id(Id { "" }) {
+    SymbolOrValue() :
+            isSymbol(false), symbol(Symbol { "" }) {
     }
 
-    Value(const Id& id) :
-            isVariable(true), id(id) {
+    SymbolOrValue(const T& value) :
+            isSymbol(false), symbol(Symbol { "" }), value(value) {
     }
 
-    bool isVar() const {
-        return this->isVariable;
+    SymbolOrValue(const Symbol& symbol) :
+            isSymbol(true), symbol(symbol), value() {
+    }
+
+    SymbolOrValue(const SymbolOrValue& other) :
+            isSymbol(other.isSymbol), symbol(other.symbol), value(other.value) {
+    }
+
+    bool isSym() const {
+        return this->isSymbol;
+    }
+
+    const Symbol& getSym() const {
+        return this->symbol;
     }
 
     const T& getVal() const {
-        assert(!isVariable);
+        assert(!isSymbol);
         return value;
     }
 
-    const unsigned int getVar() const {
-        assert(isVariable);
-        return id;
+    void bindVal(const T& value) {
+        this->value = value;
     }
 
-    bool operator <(const Value &other) const {
+    bool operator <(const SymbolOrValue &other) const {
         return value < other.value;
     }
 
+    SymbolOrValue& operator =(const SymbolOrValue &other) {
+        this->isSymbol = other.isSymbol;
+        this->symbol = other.symbol;
+        this->value = other.value;
+        return *this;
+    }
+
 private:
-    bool isVariable;
+    bool isSymbol;
+    Symbol symbol;
     T value;
-    Id id;
 };
 
-typedef Value<int> Int;
-typedef Value<string> String;
-
 template<typename ... Ts>
-struct Relation {
-    typedef tuple<Ts...> TupleType;
+struct RelationType {
+    typedef tuple<Ts...> GroundType;
+    typedef tuple<SymbolOrValue<Ts> ...> AtomicType;
+};
 
-    Relation(const set<TupleType>& tuples) :
+template<typename RELATION_TYPE>
+struct Relation {
+    typedef typename RELATION_TYPE::GroundType GroundType;
+    Relation(const set<GroundType>& tuples) :
             tuples(tuples) {
     }
-
-    set<TupleType> tuples;
-
+    const set<GroundType> tuples;
 };
 
-template<typename ... Ts>
-static Relation<Ts...> merge(const Relation<Ts...>& r1, const Relation<Ts...>& r2) {
-    set<tuple<Ts...>> tuples { r1.tuples };
-    tuples.insert(r2.tuples.begin(), r2.tuples.end());
-    return Relation<Ts...> { tuples };
-}
-
-template<typename RELATION>
-struct Atom: RELATION {
-
-    Atom(const typename RELATION::TupleType& tuple) :
-            RELATION(set<typename RELATION::TupleType> { tuple }) {
+template<typename RELATION_TYPE>
+struct Atom {
+    typedef typename RELATION_TYPE::AtomicType AtomicType;
+    Atom(const AtomicType& tuple) :
+            tuple { tuple } {
+#if 0
+        unsigned int index = 0;
+        apply([this, &index](auto&&... args) {
+            ((args.isSym() ? declareSym(args, index++, symIndexMap) : noOp(index++)), ...);}, tuple);
+#endif
     }
+    const AtomicType tuple;
+#if 0
+    typedef map<string, set<unsigned int>> SymIndexMapType;
+    SymIndexMapType symIndexMap;
+private:
+    template<typename T>
+    static void declareSym(const T& t, unsigned int index, SymIndexMapType& symIndexMap) {
+        auto symbolName = t.getSym().name;
+        if (symIndexMap.count(symbolName) == 0) {
+            symIndexMap.insert( { symbolName, { } });
+        }
+        auto it = symIndexMap.find(symbolName);
+        it->second.insert(index);
+    }
+    static void noOp(unsigned int index) {
+    }
+#endif
 };
 
 template<typename ... ATOMs>
 struct Body {
     typedef variant<ATOMs...> AtomsType;
-
-    vector<AtomsType> atoms;
+    const vector<AtomsType> atoms;
 };
 
-template<typename HEAD_ATOM, typename ... BODY_ATOMs>
+template<typename HEAD_RELATION, typename ... BODY_RELATIONs>
 struct Rule {
-    HEAD_ATOM head;
-    Body<BODY_ATOMs...> body;
+    const Atom<HEAD_RELATION> head;
+    const Body<Atom<BODY_RELATIONs> ...> body;
 };
+
+#if 0
+typedef map<string, set<unsigned int>> SymBindingsType;
+
+template<typename T>
+static void bind(const T& t, SymBindingsType& symBindings) {
+}
+
+static void noOp() {
+}
+#endif
+
+#if 0
+template<typename RELATION_TYPE>
+constexpr typename RELATION_TYPE::AtomicType bind(const typename RELATION_TYPE::AtomicType& atom, const typename RELATION_TYPE::GroundType& fact, size_t i) {
+    typename RELATION_TYPE::AtomicType boundAtom{atom};
+    if (get<i>(atom)) {
+
+    }
+    return boundAtom;
+}
+
+// bind 1 atom with 1 fact
+template<typename RELATION_TYPE, size_t ... Is>
+static Atom<RELATION_TYPE> bind(const Atom<RELATION_TYPE>& atom, const typename RELATION_TYPE::GroundType& fact, index_sequence<Is...>) {
+    typename RELATION_TYPE::AtomicType boundAtom { atom.tuple };
+
+    ((boundAtom = bind<RELATION_TYPE>(boundAtom, fact, Is)), ...);
+    //((boundAtom = bind<RELATION_TYPE>(boundAtom, fact, Is)), ...);
+    //apply([&boundAtom](auto&&... element) {
+    //    ((atomicElement.isSym() ? bind(atomicElement, symBindings) : noOp()), ...);}, fact);
+
+    return Atom<RELATION_TYPE> { boundAtom };
+}
+
+template<typename RELATION_TYPE>
+static Relation<RELATION_TYPE> bind(const Atom<RELATION_TYPE>& atom, const Relation<RELATION_TYPE>& relation) {
+    Relation<RELATION_TYPE> boundAtoms;
+    auto indexSequence = index_sequence_for<typename RELATION_TYPE::GroundType> { };
+    for (const auto& fact : relation.tuples) {
+        typename RELATION_TYPE::GroundType boundAtom = bind(atom, fact, indexSequence);
+        boundAtoms.tuples.insert(boundAtom);
+    }
+    return boundAtoms;
+}
+#endif
+
+template<typename RELATION_TYPE>
+static RELATION_TYPE merge(const RELATION_TYPE& r1, const RELATION_TYPE& r2) {
+    set<typename RELATION_TYPE::GroundType> tuples { r1.tuples };
+    tuples.insert(r2.tuples.begin(), r2.tuples.end());
+    return RELATION_TYPE { tuples };
+}
 
 }
 

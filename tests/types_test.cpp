@@ -94,7 +94,7 @@ int main() {
         }
 
         // Bind 1 atom with a relation (n facts)
-        //auto newRelation = bind(clause1, advisers);
+        auto newRelation = bind(clause1, advisers);
 
     }
 }

@@ -58,9 +58,6 @@ template<typename ... Ts>
 struct Relation {
     typedef tuple<Ts...> GroundType;
     typedef tuple<SymbolOrValue<Ts> ...> AtomicType;
-    Relation(const set<GroundType>& tuples) :
-            tuples(tuples) {
-    }
     const set<GroundType> tuples;
 };
 
@@ -125,35 +122,20 @@ static optional<typename RELATION_TYPE::AtomicType> bind(
 }
 
 // bind 1 atom with a relation (n facts)
-#if 0
 template<typename RELATION_TYPE>
-static Relation<RELATION_TYPE> bind(const Atom<RELATION_TYPE>& atom, const Relation<RELATION_TYPE>& relation) {
-    set<typename Relation<RELATION_TYPE>::GroundType> outputTuples;
+static RELATION_TYPE bind(
+        const typename RELATION_TYPE::AtomicType& atom,
+        const RELATION_TYPE& relation
+) {
+    set<typename RELATION_TYPE::GroundType> outputTuples;
     for (const auto& fact : relation.tuples) {
-        const auto& boundAtom = bind(atom, fact);
+        const auto& boundAtom = bind<RELATION_TYPE>(atom, fact);
         if (boundAtom.has_value()) {
-//            outputTuples.insert(boundAtom.value());
+            //outputTuples.insert(boundAtom.value());
         }
     }
-    return Relation<RELATION_TYPE>{outputTuples};
+    return RELATION_TYPE{outputTuples};
 }
-#else
-
-#if 0
-template<typename RELATION_TYPE>
-static Relation<RELATION_TYPE> bind(const typename RELATION_TYPE::AtomicType& atom, const Relation<RELATION_TYPE>& relation) {
-    set<typename Relation<RELATION_TYPE>::GroundType> outputTuples;
-    for (const auto& fact : relation.tuples) {
-//        const auto& boundAtom = bind(atom, fact);
-//        if (boundAtom.has_value()) {
-//            outputTuples.insert(boundAtom.value());
-//        }
-    }
-    return Relation<RELATION_TYPE>{outputTuples};
-}
-#endif
-
-#endif
 
 template<typename RELATION_TYPE>
 static RELATION_TYPE merge(const RELATION_TYPE& r1, const RELATION_TYPE& r2) {

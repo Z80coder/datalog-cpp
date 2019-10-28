@@ -54,12 +54,37 @@ struct SymbolOrValue : public variant<T, shared_ptr<Symbol<T>>> {
     }
 };
 
+template<typename T>
+static ostream& operator<<(ostream& out, const SymbolOrValue<T>& s)
+{
+    if (s.isSym()) {
+        out << s.getSym();
+    } else {
+        out << s.getVal();
+    }
+    return out;
+}
+
 template<typename ... Ts>
 struct Relation {
     typedef tuple<Ts...> GroundType;
     typedef tuple<SymbolOrValue<Ts> ...> AtomicType;
     const set<GroundType> tuples;
 };
+
+template<typename RELATION_TYPE>
+static ostream& print(ostream& out, const typename RELATION_TYPE::GroundType& s)
+{
+    apply([&out](auto&&... args) {(( out << "[" << args << "] "), ...);}, s);
+    return out;
+}
+
+template<typename RELATION_TYPE>
+static ostream& print(ostream& out, const typename RELATION_TYPE::AtomicType& s)
+{
+    apply([&out](auto&&... args) {(( out << "[" << args << "] "), ...);}, s);
+    return out;
+}
 
 template<typename HEAD_RELATION, typename ... BODY_RELATIONs>
 struct Rule {
@@ -80,7 +105,7 @@ static void unbind(const typename RELATION_TYPE::AtomicType& tuple) {
 
 // bind 1 SymbolOrValue with 1 Value
 template<unsigned int I, typename VALUE_TYPE>
-bool bind(SymbolOrValue<VALUE_TYPE>& s, const VALUE_TYPE& v) {
+bool bind(SymbolOrValue<VALUE_TYPE>& s, const VALUE_TYPE& v, VALUE_TYPE& b) {
     if (s.isSym()) {
         Symbol<VALUE_TYPE>& symbol = *s.getSym().get();
         // has the symbol already been bound?
@@ -91,30 +116,44 @@ bool bind(SymbolOrValue<VALUE_TYPE>& s, const VALUE_TYPE& v) {
             }
         }
         symbol.bind(v);
-        cout << "bound " << s.getSym() << " to " << v << endl;
+        b = v;
     }
     return true;
 }
 
 template<typename RELATION_TYPE, size_t ... Is>
-static optional<typename RELATION_TYPE::AtomicType> bind(
-        const typename RELATION_TYPE::AtomicType& atom,
+static optional<typename RELATION_TYPE::GroundType> bind(
+        typename RELATION_TYPE::AtomicType& atom,
         const typename RELATION_TYPE::GroundType& fact,
         index_sequence<Is...>
 ) {
-    typename RELATION_TYPE::AtomicType boundAtom { atom };
-    unbind<RELATION_TYPE>(boundAtom);
-    bool successfulBinding = ((bind<Is>(get<Is>(boundAtom), get<Is>(fact))) and ...);
+    unbind<RELATION_TYPE>(atom);
+    typename RELATION_TYPE::GroundType boundAtom;
+    bool successfulBinding = ((bind<Is>(get<Is>(atom), get<Is>(fact), get<Is>(boundAtom))) and ...);
     if (successfulBinding) {
+        {
+            cout << "bound ";
+            print<RELATION_TYPE>(cout, atom);
+            cout << " to ";
+            print<RELATION_TYPE>(cout, boundAtom);
+            cout << endl;
+        }
         return boundAtom;
+    }
+    {
+        cout << "failed to bind ";
+        print<RELATION_TYPE>(cout, atom);
+        cout << " with ";
+        print<RELATION_TYPE>(cout, fact);
+        cout << endl;
     }
     return nullopt;
 }
 
 // bind 1 atom with 1 fact
 template<typename RELATION_TYPE>
-static optional<typename RELATION_TYPE::AtomicType> bind(
-        const typename RELATION_TYPE::AtomicType& atom,
+static optional<typename RELATION_TYPE::GroundType> bind(
+        typename RELATION_TYPE::AtomicType& atom,
         const typename RELATION_TYPE::GroundType& fact
 ) {
     auto indexSequence = make_index_sequence<tuple_size<typename RELATION_TYPE::GroundType>::value> { };
@@ -124,14 +163,14 @@ static optional<typename RELATION_TYPE::AtomicType> bind(
 // bind 1 atom with a relation (n facts)
 template<typename RELATION_TYPE>
 static RELATION_TYPE bind(
-        const typename RELATION_TYPE::AtomicType& atom,
+        typename RELATION_TYPE::AtomicType& atom,
         const RELATION_TYPE& relation
 ) {
     set<typename RELATION_TYPE::GroundType> outputTuples;
-    for (const auto& fact : relation.tuples) {
+    for (auto& fact : relation.tuples) {
         const auto& boundAtom = bind<RELATION_TYPE>(atom, fact);
         if (boundAtom.has_value()) {
-            //outputTuples.insert(boundAtom.value());
+            outputTuples.insert(boundAtom.value());
         }
     }
     return RELATION_TYPE{outputTuples};
@@ -147,91 +186,3 @@ static RELATION_TYPE merge(const RELATION_TYPE& r1, const RELATION_TYPE& r2) {
 }
 
 #endif /* SRC_DATALOG_H_ */
-
-#if 0
-// bind 1 SymbolOrValue with 1 Value
-template<unsigned int I, typename VALUE_TYPE, typename VARIANT_TYPE>
-bool bind(SymbolOrValue<VALUE_TYPE>& s, const VALUE_TYPE& v, map<string, VARIANT_TYPE>& bindings) {
-    if (s.isSym()) {
-        const auto& symbolName = s.getSym().name;
-        // Has this symbol already been bound?
-        if (bindings.count(symbolName) > 0) {
-            // Is this a consistent binding?
-#if 0
-            const auto& boundVariant = bindings.at(symbolName);
-            const auto& boundVariantIndex = boundVariant.index();
-            const auto& boundValue = get<boundVariantIndex>(boundVariant);
-            if (!(boundValue == v)) {
-                return false;
-            }
-#endif
-        }
-        s.bindVal(v);
-        VARIANT_TYPE vt(in_place_index_t<I> { }, v);
-        cout << "Recording binding at index " << I << endl;
-        bindings.insert( { symbolName, vt });
-        cout << "Bound " << s.getSym().name << " to " << v << endl;
-    }
-    return true;
-}
-
-// bind 1 atom with 1 fact
-template<typename RELATION_TYPE, size_t ... Is>
-static optional<Atom<RELATION_TYPE>> bind(const Atom<RELATION_TYPE>& atom, const typename RELATION_TYPE::GroundType& fact, index_sequence<Is...>) {
-    typename RELATION_TYPE::AtomicType boundAtom { atom.tuple };
-    map<string, typename RELATION_TYPE::VariantType> bindings;
-    bool successfulBinding = ((bind<Is>(get<Is>(boundAtom), get<Is>(fact), bindings)) and ...);
-    if (successfulBinding) {
-        return Atom<RELATION_TYPE> { boundAtom };
-    }
-    return nullopt;
-}
-#endif
-
-#if 0
-typedef map<string, set<unsigned int>> SymBindingsType;
-
-template<typename T>
-static void bind(const T& t, SymBindingsType& symBindings) {
-}
-
-static void noOp() {
-}
-#endif
-
-#if 0
-        unsigned int index = 0;
-        apply([this, &index](auto&&... args) {
-            ((args.isSym() ? declareSym(args, index++, symIndexMap) : noOp(index++)), ...);}, tuple);
-#endif
-
-#if 0
-    typedef map<string, set<unsigned int>> SymIndexMapType;
-    SymIndexMapType symIndexMap;
-private:
-    template<typename T>
-    static void declareSym(const T& t, unsigned int index, SymIndexMapType& symIndexMap) {
-        auto symbolName = t.getSym().name;
-        if (symIndexMap.count(symbolName) == 0) {
-            symIndexMap.insert( { symbolName, { } });
-        }
-        auto it = symIndexMap.find(symbolName);
-        it->second.insert(index);
-    }
-    static void noOp(unsigned int index) {
-    }
-#endif
-
-#if 0
-
-template<typename RELATION_TYPE>
-static Relation<RELATION_TYPE> bind(const Atom<RELATION_TYPE>& atom, const Relation<RELATION_TYPE>& relation) {
-    Relation<RELATION_TYPE> boundAtoms;
-    auto indexSequence = index_sequence_for<typename RELATION_TYPE::GroundType> { };
-    for (const auto& fact : relation.tuples) {
-        typename RELATION_TYPE::GroundType boundAtom = bind(atom, fact, indexSequence);
-        boundAtoms.tuples.insert(boundAtom);
-    }
-    return boundAtoms;
-}
-#endif

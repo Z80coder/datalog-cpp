@@ -72,7 +72,7 @@ int main() {
         if (boundAtom1.has_value()) {
             cout << "successful bind" << endl;
         } else {
-            cout << "could not bind" << endl;
+            cout << "failed bind" << endl;
         }
 
         // Bind 1 atom with 1 fact
@@ -81,7 +81,7 @@ int main() {
         if (boundAtom2.has_value()) {
             cout << "successful bind" << endl;
         } else {
-            cout << "could not bind" << endl;
+            cout << "failed bind" << endl;
         }
 
         // Bind 1 atom with 1 fact
@@ -90,11 +90,14 @@ int main() {
         if (boundAtom3.has_value()) {
             cout << "successful bind" << endl;
         } else {
-            cout << "could not bind" << endl;
+            cout << "failed bind" << endl;
         }
 
         // Bind 1 atom with a relation (n facts)
-        auto newRelation = bind(clause1, advisers);
+        cout << "Should bind with all relations:" << endl;
+        auto newRelation1 = bind(clause1, advisers);
+        cout << "Should bind with 0 relations:" << endl;
+        auto newRelation2 = bind(dummyClause, advisers);
 
     }
 }

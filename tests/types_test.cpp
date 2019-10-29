@@ -55,7 +55,8 @@ int main() {
         AcademicAncestor::AtomicType head2 { { x }, { z } };
         Adviser::AtomicType clause2 { { x }, { y } };
         AcademicAncestor::AtomicType clause3 { { y }, { z } };
-        Rule<AcademicAncestor, Adviser, AcademicAncestor> rule2 { head2, { clause2, clause3 } };
+        typedef Rule<AcademicAncestor, Adviser, AcademicAncestor> Rule2Type;
+        Rule2Type rule2 { head2, { clause2, clause3 } };
 
         // Query1
         struct Query1: Relation<string> {
@@ -99,5 +100,14 @@ int main() {
         cout << "Should bind with 0 relations:" << endl;
         auto newRelation2 = bind(dummyClause, advisers);
 
+        typedef State<Adviser, AcademicAncestor> StateType;
+        StateType state{{ advisers, {} }};
+        StateType::Iterator it;
+        while (it.hasNext(state)) {
+           it.next(state);
+        }
+
+
+        apply<Rule2Type>(rule2, state);
     }
 }

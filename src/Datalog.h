@@ -86,12 +86,6 @@ static ostream& print(ostream& out, const typename RELATION_TYPE::AtomicType& s)
     return out;
 }
 
-template<typename HEAD_RELATION, typename ... BODY_RELATIONs>
-struct Rule {
-    const typename HEAD_RELATION::AtomicType head;
-    const tuple<typename BODY_RELATIONs::AtomicType...> body;
-};
-
 template<typename RELATION_TYPE, size_t ... Is>
 static void unbind(const typename RELATION_TYPE::AtomicType& tuple, index_sequence<Is...>) {
     ((get<Is>(tuple).getSym()->unbind()), ...);
@@ -175,6 +169,132 @@ static RELATION_TYPE bind(
     }
     return RELATION_TYPE{outputTuples};
 }
+
+template<typename HEAD_RELATION, typename ... BODY_RELATIONs>
+struct Rule {
+    const typename HEAD_RELATION::AtomicType head;
+    typedef tuple<typename BODY_RELATIONs::AtomicType...> BodyType;
+    const BodyType body;
+};
+
+template<typename ... RELATIONs>
+struct State {
+   typedef tuple<RELATIONs...> RelationsType;
+   RelationsType relations;
+
+   struct Iterator {
+      bool hasNext(const State& state) {
+#if 0
+         const auto numRelations = tuple_size<RelationsType>::value;
+         return not (masterIndex == numRelations - 1 and
+               index[numRelations - 1] == get<numRelations>(state.relations).tuples.size() - 1);
+#else
+         return true;
+#endif
+      }
+
+      template<typename RELATION_TYPE>
+      void pick(const RELATION_TYPE& relation, unsigned int relationIndex) {
+         cout << "pick relation " << relationIndex << " with " << index[relationIndex] << endl;
+      }
+
+      template<size_t ... Is>
+      void pick(const RelationsType& relations, RelationsType& slice, index_sequence<Is...>) {
+         ((pick(get<Is>(relations), Is)), ...);
+      }
+
+#if 0
+      template<typename RELATION_TYPE>
+      void next(const RELATION_TYPE& relation, size_t i) {
+         index[i]++;
+         if (index[i] == relation.tuples.size()) {
+            index[i] = 0;
+            const auto lastRelationIndex = tuple_size<RelationsType>::value - 1;
+            if (i == lastRelationIndex) {
+               finished = true;
+            }
+         }
+      }
+
+      template<size_t ... Is>
+      void next(const RelationsType& relations, index_sequence<Is...>) {
+         ((next(get<Is>(relations), Is)), ...);
+      }
+#endif
+      template<size_t I>
+      void next(const RelationsType& relations, size_t i) {
+         index[I]++;
+         if (index[I] == get<I>(relations).tuples.size()) {
+            index[I] = 0;
+            masterIndex++;
+            next(relations, masterIndex);
+            masterIndex--;
+         }
+      }
+
+      RelationsType next(const State& state) {
+         RelationsType slice;
+         auto indexSequence = make_index_sequence<tuple_size<RelationsType>::value> { };
+         pick(state.relations, slice, indexSequence);
+         next(state.relations, masterIndex);
+         return slice;
+      }
+
+   private:
+      size_t masterIndex = 0;
+      array<unsigned int, tuple_size<RelationsType>::value> index = {0};
+   };
+};
+
+template<typename RELATION_TYPE>
+static bool apply(
+      const typename RELATION_TYPE::AtomicType& atom,
+      const RELATION_TYPE& relation) {
+   // we have the atom, and some corresponding facts, now bind them
+   // but we don't want the ground atoms
+   // we want the bound atoms
+
+   // to avoid copying symbols we should try and find a complete binding across all relations,
+   // and then move to next complete binding etc.
+
+   // so basically we want to stream all the combinations of facts, where each combination
+   // consists of selecting 1 fact from each relation in the state
+   return true;
+}
+
+template<typename RULE_TYPE, typename ... RELATIONs, size_t ... Is>
+static void apply(
+      const typename RULE_TYPE::BodyType& body,
+      const typename State<RELATIONs...>::RelationsType& relations,
+      index_sequence<Is...>
+) {
+   /*
+    * Bind n atoms (of different relation types, such as the body of a rule)
+    * with state consisting of
+    * n_{i} facts (of different relation types i = 1 ... m)
+    */
+   // for each atom in body find and bind with corresponding relation
+   bool success = ((
+         apply<typename tuple_element<Is, typename State<RELATIONs...>::RelationsType>::type>(
+               get<Is>(body),
+               get<typename tuple_element<Is, typename State<RELATIONs...>::RelationsType>::type>(relations)
+               )) and ...);
+}
+
+template<typename RULE_TYPE, typename ... RELATIONs>
+static void apply(
+      const typename RULE_TYPE::BodyType& body,
+      const typename State<RELATIONs...>::RelationsType& relations
+) {
+   auto indexSequence = make_index_sequence<tuple_size<typename RULE_TYPE::BodyType>::value> { };
+   apply<RULE_TYPE, RELATIONs...>(body, relations, indexSequence);
+}
+
+template<typename RULE_TYPE, typename ... RELATIONs>
+static void apply(const RULE_TYPE& rule, const State<RELATIONs...>& state) {
+   apply<RULE_TYPE, RELATIONs...>(rule.body, state.relations);
+}
+
 
 template<typename RELATION_TYPE>
 static RELATION_TYPE merge(const RELATION_TYPE& r1, const RELATION_TYPE& r2) {

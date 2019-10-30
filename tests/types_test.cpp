@@ -20,7 +20,10 @@ int main() {
         String_Int r4 {{{ { "hello", 1 } }}};
         String_Int r5 {{{ {"hello", 1 }, { "world", 2 } }}};
         String_Int_String r6 {{{ { "hello", 1, "world" }, { "world", 2, "hello" }, { "world", 3, "world" } }}};
+
+#if 0
         String_Int r7 = merge(r4, r5);
+#endif
 
     }
 

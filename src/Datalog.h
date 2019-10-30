@@ -72,29 +72,24 @@ struct Relation {
     const set<GroundType> tuples;
 };
 
-template<typename RELATION_TYPE>
-static ostream& print(ostream& out, const typename RELATION_TYPE::GroundType& s)
+template<typename TUPLE_TYPE>
+static ostream& print(ostream& out, const TUPLE_TYPE& s)
 {
-    apply([&out](auto&&... args) {(( out << "[" << args << "] "), ...);}, s);
-    return out;
-}
-
-template<typename RELATION_TYPE>
-static ostream& print(ostream& out, const typename RELATION_TYPE::AtomicType& s)
-{
-    apply([&out](auto&&... args) {(( out << "[" << args << "] "), ...);}, s);
+    out << " [";
+    apply([&out](auto&&... args) {(( out << " [" << args << "] "), ...);}, s);
+    out << "] ";
     return out;
 }
 
 template<typename RELATION_TYPE, size_t ... Is>
 static void unbind(const typename RELATION_TYPE::AtomicType& tuple, index_sequence<Is...>) {
+    // TODO: why can't we use the apply pattern everywhere?
     ((get<Is>(tuple).getSym()->unbind()), ...);
 }
 
 template<typename RELATION_TYPE>
 static void unbind(const typename RELATION_TYPE::AtomicType& tuple) {
-    auto indexSequence = make_index_sequence<tuple_size<typename RELATION_TYPE::AtomicType>::value> { };
-    unbind<RELATION_TYPE>(tuple, indexSequence);
+    unbind<RELATION_TYPE>(tuple, make_index_sequence<tuple_size<typename RELATION_TYPE::AtomicType>::value> { });
 }
 
 // bind 1 SymbolOrValue with 1 Value
@@ -127,18 +122,18 @@ static optional<typename RELATION_TYPE::GroundType> bind(
     if (successfulBinding) {
         {
             cout << "bound ";
-            print<RELATION_TYPE>(cout, atom);
+            print(cout, atom);
             cout << " to ";
-            print<RELATION_TYPE>(cout, boundAtom);
+            print(cout, boundAtom);
             cout << endl;
         }
         return boundAtom;
     }
     {
         cout << "failed to bind ";
-        print<RELATION_TYPE>(cout, atom);
+        print(cout, atom);
         cout << " with ";
-        print<RELATION_TYPE>(cout, fact);
+        print(cout, fact);
         cout << endl;
     }
     return nullopt;
@@ -150,8 +145,7 @@ static optional<typename RELATION_TYPE::GroundType> bind(
         typename RELATION_TYPE::AtomicType& atom,
         const typename RELATION_TYPE::GroundType& fact
 ) {
-    auto indexSequence = make_index_sequence<tuple_size<typename RELATION_TYPE::GroundType>::value> { };
-    return bind<RELATION_TYPE>(atom, fact, indexSequence);
+    return bind<RELATION_TYPE>(atom, fact, make_index_sequence<tuple_size<typename RELATION_TYPE::GroundType>::value> { });
 }
 
 // bind 1 atom with a relation (n facts)
@@ -181,6 +175,12 @@ template<typename ... RELATIONs>
 struct State {
    typedef tuple<RELATIONs...> RelationsType;
    RelationsType relations;
+   typedef tuple<typename RELATIONs::GroundType const* ...> SliceType;
+
+   static ostream& print(ostream& out, const SliceType& slice) {
+       apply([&out](auto&&... args) {(( datalog::print(out, *args), ...));}, slice);
+       return out;
+   }
 
    struct Iterator {
       Iterator(const RelationsType& relations) : sizes(relationSizes(relations)) {
@@ -191,15 +191,21 @@ struct State {
       }
 
       template<typename RELATION_TYPE>
-      void pick(const RELATION_TYPE& relation, unsigned int relationIndex) {
-         cout << "pick relation " << relationIndex << " with " << index[relationIndex] << endl;
+      void pick(
+          const RELATION_TYPE& relation,
+          typename RELATION_TYPE::GroundType const*& sliceElement,
+          unsigned int relationIndex
+      ) {
+         //cout << "pick relation " << relationIndex << " with " << index[relationIndex] << endl;
+         // TODO: inefficient
+         sliceElement = &*std::next(relation.tuples.begin(), index[relationIndex]);
       }
 
       template<size_t ... Is>
-      void pick(const RelationsType& relations, RelationsType& slice, index_sequence<Is...>) {
-          cout << "[" << endl;
-         ((pick(get<Is>(relations), Is)), ...);
-         cout << "]" << endl;
+      void pick(const RelationsType& relations, SliceType& slice, index_sequence<Is...>) {
+          //cout << "[" << endl;
+         ((pick(get<Is>(relations), get<Is>(slice), Is)), ...);
+         //cout << "]" << endl;
       }
 
       // Returns true if no more combinations of facts to iterate over
@@ -219,11 +225,13 @@ struct State {
          return false;
       }
 
-      RelationsType next(const State& state) {
-         RelationsType slice;
-         auto indexSequence = make_index_sequence<tuple_size<RelationsType>::value> { };
-         pick(state.relations, slice, indexSequence);
+      SliceType next(const State& state) {
+         SliceType slice;
+         pick(state.relations, slice, make_index_sequence<tuple_size<RelationsType>::value> { });
          iterationFinished = next(0, true);
+         cout << "slice = ";
+         print(cout, slice);
+         cout << endl;
          return slice;
       }
 
@@ -243,8 +251,7 @@ struct State {
 
       static array<unsigned int, tuple_size<RelationsType>::value> relationSizes(const RelationsType& relations) {
           array<unsigned int, tuple_size<RelationsType>::value> sizes;
-          auto indexSequence = make_index_sequence<tuple_size<RelationsType>::value> { };
-          relationSizes(relations, sizes, indexSequence);
+          relationSizes(relations, sizes, make_index_sequence<tuple_size<RelationsType>::value> { });
           return sizes;
       }
 
@@ -298,8 +305,7 @@ static void apply(
       const typename RULE_TYPE::BodyType& body,
       const typename State<RELATIONs...>::RelationsType& relations
 ) {
-   auto indexSequence = make_index_sequence<tuple_size<typename RULE_TYPE::BodyType>::value> { };
-   apply<RULE_TYPE, RELATIONs...>(body, relations, indexSequence);
+   apply<RULE_TYPE, RELATIONs...>(body, relations, make_index_sequence<tuple_size<typename RULE_TYPE::BodyType>::value> { });
 }
 
 template<typename RULE_TYPE, typename ... RELATIONs>
@@ -308,12 +314,14 @@ static void apply(const RULE_TYPE& rule, const State<RELATIONs...>& state) {
 }
 
 
+#if 0
 template<typename RELATION_TYPE>
 static RELATION_TYPE merge(const RELATION_TYPE& r1, const RELATION_TYPE& r2) {
     set<typename RELATION_TYPE::GroundType> tuples { r1.tuples };
     tuples.insert(r2.tuples.begin(), r2.tuples.end());
     return RELATION_TYPE { tuples };
 }
+#endif
 
 }
 

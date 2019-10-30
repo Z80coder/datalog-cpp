@@ -183,14 +183,11 @@ struct State {
    RelationsType relations;
 
    struct Iterator {
-      bool hasNext(const State& state) {
-#if 0
-         const auto numRelations = tuple_size<RelationsType>::value;
-         return not (masterIndex == numRelations - 1 and
-               index[numRelations - 1] == get<numRelations>(state.relations).tuples.size() - 1);
-#else
-         return true;
-#endif
+      Iterator(const RelationsType& relations) : sizes(relationSizes(relations)) {
+      }
+
+      bool hasNext(const State& state) const {
+          return not iterationFinished;
       }
 
       template<typename RELATION_TYPE>
@@ -200,50 +197,65 @@ struct State {
 
       template<size_t ... Is>
       void pick(const RelationsType& relations, RelationsType& slice, index_sequence<Is...>) {
+          cout << "[" << endl;
          ((pick(get<Is>(relations), Is)), ...);
+         cout << "]" << endl;
       }
 
-#if 0
-      template<typename RELATION_TYPE>
-      void next(const RELATION_TYPE& relation, size_t i) {
-         index[i]++;
-         if (index[i] == relation.tuples.size()) {
-            index[i] = 0;
-            const auto lastRelationIndex = tuple_size<RelationsType>::value - 1;
-            if (i == lastRelationIndex) {
-               finished = true;
-            }
+      // Returns true if no more combinations of facts to iterate over
+      bool next(size_t masterIndex, bool exhausted) {
+         if (masterIndex >= tuple_size<RelationsType>::value) {
+             // no more relations
+             return exhausted and true;
          }
-      }
-
-      template<size_t ... Is>
-      void next(const RelationsType& relations, index_sequence<Is...>) {
-         ((next(get<Is>(relations), Is)), ...);
-      }
-#endif
-      template<size_t I>
-      void next(const RelationsType& relations, size_t i) {
-         index[I]++;
-         if (index[I] == get<I>(relations).tuples.size()) {
-            index[I] = 0;
-            masterIndex++;
-            next(relations, masterIndex);
-            masterIndex--;
+         // increase index of this relation
+         index[masterIndex]++;
+         // have we exhausted this relation?
+         if (index[masterIndex] >= sizes[masterIndex]) {
+            // then reset this relation, and increase index of next relation
+            index[masterIndex] = 0;
+            return exhausted and next(masterIndex + 1, exhausted);
          }
+         return false;
       }
 
       RelationsType next(const State& state) {
          RelationsType slice;
          auto indexSequence = make_index_sequence<tuple_size<RelationsType>::value> { };
          pick(state.relations, slice, indexSequence);
-         next(state.relations, masterIndex);
+         iterationFinished = next(0, true);
          return slice;
       }
 
    private:
-      size_t masterIndex = 0;
+      const array<unsigned int, tuple_size<RelationsType>::value> sizes = {0};
       array<unsigned int, tuple_size<RelationsType>::value> index = {0};
+      bool iterationFinished = false;
+
+      template<size_t ... Is>
+      static void relationSizes(
+              const RelationsType& relations,
+              array<unsigned int, tuple_size<RelationsType>::value>& sizes,
+              index_sequence<Is...>
+      ) {
+          ((sizes[Is] = get<Is>(relations).tuples.size()), ...);
+      }
+
+      static array<unsigned int, tuple_size<RelationsType>::value> relationSizes(const RelationsType& relations) {
+          array<unsigned int, tuple_size<RelationsType>::value> sizes;
+          auto indexSequence = make_index_sequence<tuple_size<RelationsType>::value> { };
+          relationSizes(relations, sizes, indexSequence);
+          return sizes;
+      }
+
    };
+
+   Iterator iterator() const {
+       Iterator it{relations};
+       return it;
+   }
+
+
 };
 
 template<typename RELATION_TYPE>

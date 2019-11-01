@@ -72,8 +72,7 @@ int main() {
 
         // Bind 1 atom with 1 fact
         Adviser::GroundType fact1 { { { "Andrew Rice" } }, { { "Mistral Contrastin" } } };
-        auto boundAtom1 = bind<Adviser>(clause1, fact1);
-        if (boundAtom1.has_value()) {
+        if (bind<Adviser>(clause1, fact1)) {
             cout << "successful bind" << endl;
         } else {
             cout << "failed bind" << endl;
@@ -81,8 +80,7 @@ int main() {
 
         // Bind 1 atom with 1 fact
         Adviser::AtomicType dummyClause { { x }, { x } };
-        auto boundAtom2 = bind<Adviser>(dummyClause, fact1);
-        if (boundAtom2.has_value()) {
+        if (bind<Adviser>(dummyClause, fact1)) {
             cout << "successful bind" << endl;
         } else {
             cout << "failed bind" << endl;
@@ -90,18 +88,19 @@ int main() {
 
         // Bind 1 atom with 1 fact
         Adviser::GroundType fact2 { { { "Mistral Contrastin" } }, { { "Mistral Contrastin" } } };
-        auto boundAtom3 = bind<Adviser>(dummyClause, fact2);
-        if (boundAtom3.has_value()) {
+        if (bind<Adviser>(dummyClause, fact2)) {
             cout << "successful bind" << endl;
         } else {
             cout << "failed bind" << endl;
         }
 
+#if 0
         // Bind 1 atom with a relation (n facts)
         cout << "Should bind with all relations:" << endl;
         auto newRelation1 = bind(clause1, advisers);
         cout << "Should bind with 0 relations:" << endl;
         auto newRelation2 = bind(dummyClause, advisers);
+#endif
 
         typedef State<Adviser, AcademicAncestor> StateType;
         StateType state1{{ advisers, {} }};
@@ -117,7 +116,6 @@ int main() {
         while (it2.hasNext()) {
            it2.next();
         }
-
 
         apply<Rule2Type>(rule2, state1);
     }

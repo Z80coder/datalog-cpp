@@ -106,18 +106,16 @@ int main() {
         typedef State<Adviser, AcademicAncestor> StateType;
         StateType state1{{ advisers, {} }};
         auto it1 = state1.iterator();
-#if 0
-        while (it1.hasNext(state1)) {
-           it1.next(state1);
+        while (it1.hasNext()) {
+           it1.next();
         }
-#endif
 
         AcademicAncestor dummyAncestors {{{ { { "Fred Bloggs" }, { "Nobby Perkins" } }, { { "Charlie Chopper" }, { "Jim Taylor" } },
             { { "Cooper Simpson" }, { "Lilly Fairweather" } }}}};
         StateType state2{{ advisers, dummyAncestors }};
         auto it2 = state2.iterator();
-        while (it2.hasNext(state2)) {
-           it2.next(state2);
+        while (it2.hasNext()) {
+           it2.next();
         }
 
 

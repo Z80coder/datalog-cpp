@@ -177,27 +177,39 @@ struct State {
    typedef tuple<RELATIONs...> RelationsType;
    RelationsType relations;
    typedef tuple<typename RELATIONs::GroundType const* ...> SliceType;
+   typedef tuple<typename set<typename RELATIONs::GroundType>::const_iterator...> IteratorsArrayType;
+
+   template<typename TUPLE_TYPE>
+   static ostream& print(ostream& out, TUPLE_TYPE const* p) {
+       if (p) {
+           datalog::print(out, *p);
+       }
+       return out;
+   }
 
    static ostream& print(ostream& out, const SliceType& slice) {
-       apply([&out](auto&&... args) {(( datalog::print(out, *args), ...));}, slice);
+       apply([&out](auto&&... args) {(( print(out, args), ...));}, slice);
        return out;
    }
 
    struct Iterator {
       Iterator(const RelationsType& relations) :
+          relations(relations),
           iterators(initIterators(relations)) {
       }
 
-      bool hasNext(const State& state) const {
-          return not iterationFinished;
-      }
-
+   private:
       template<size_t I, typename RELATION_TYPE>
       void pick(
           const RELATION_TYPE& relation,
           typename RELATION_TYPE::GroundType const*& sliceElement
       ) {
-          sliceElement = &*get<I>(iterators);
+          const auto& it = get<I>(iterators);
+          if (it != relation.tuples.end()) {
+              sliceElement = &*it;
+          } else {
+              sliceElement = nullptr;
+          }
       }
 
       template<size_t ... Is>
@@ -207,8 +219,6 @@ struct State {
          //cout << "]" << endl;
       }
 
-      typedef tuple<typename set<typename RELATIONs::GroundType>::const_iterator...> IteratorsArrayType;
-
       template<size_t I>
       bool next(
               const RelationsType& relations,
@@ -217,9 +227,11 @@ struct State {
        ) {
          bool iterationFinished = false;
          if (not stop) {
-             get<I>(iterators)++;
-             if (get<I>(iterators) == get<I>(relations).tuples.end()) {
-                 get<I>(iterators) = get<I>(relations).tuples.begin();
+             auto& it = get<I>(iterators);
+             const auto& end = get<I>(relations).tuples.end();
+             if (it != end) it++;
+             if (it == end) {
+                 it = get<I>(relations).tuples.begin();
                  if (I == tuple_size<RelationsType>::value - 1) {
                      iterationFinished = true;
                  }
@@ -236,11 +248,16 @@ struct State {
           return ((next<Is>(relations, iterators, stop)) or ...);
       }
 
-      SliceType next(const State& state) {
+   public:
+      bool hasNext() const {
+          return not iterationFinished;
+      }
+
+      SliceType next() {
          SliceType slice;
          auto indexSequence = make_index_sequence<tuple_size<RelationsType>::value> { };
-         pick(state.relations, slice, indexSequence);
-         iterationFinished = next(state.relations, iterators, indexSequence);
+         pick(relations, slice, indexSequence);
+         iterationFinished = next(relations, iterators, indexSequence);
          {
              cout << "slice = ";
              print(cout, slice);
@@ -250,20 +267,21 @@ struct State {
       }
 
    private:
+      const RelationsType& relations;
       IteratorsArrayType iterators;
       bool iterationFinished = false;
 
       template<typename RELATION_TYPE, typename ITERATOR_TYPE>
-      void initIterator(const RELATION_TYPE& relation, ITERATOR_TYPE& iterator) {
+      static void initIterator(const RELATION_TYPE& relation, ITERATOR_TYPE& iterator) {
           iterator = relation.tuples.begin();
       }
 
       template<size_t ... Is>
-      void initIterators(const RelationsType& relations, IteratorsArrayType& iterators, index_sequence<Is...>) {
+      static void initIterators(const RelationsType& relations, IteratorsArrayType& iterators, index_sequence<Is...>) {
           ((initIterator(get<Is>(relations), get<Is>(iterators))), ...);
       }
 
-      IteratorsArrayType initIterators(const RelationsType& relations) {
+      static IteratorsArrayType initIterators(const RelationsType& relations) {
           IteratorsArrayType iterators;
           initIterators(relations, iterators, make_index_sequence<tuple_size<IteratorsArrayType>::value> { });
           return iterators;

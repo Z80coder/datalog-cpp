@@ -20,6 +20,7 @@ using namespace std;
 template <typename T>
 struct Symbol : optional<T>
 {
+	//typedef shared_ptr<Symbol> Type;
 
 	void bind(const T &value)
 	{
@@ -43,23 +44,17 @@ struct Symbol : optional<T>
 	}
 };
 
-template<typename T>
-shared_ptr<Symbol<T>> symbol() {
-	return make_shared<Symbol<T>>();
-}
-
 template <typename T>
-struct SymbolOrValue : public variant<T, shared_ptr<Symbol<T>>>
+struct SymbolOrValue : public variant<T, Symbol<T>*>
 {
-
-	typedef shared_ptr<Symbol<T>> SymbolType;
+	typedef Symbol<T>* SymbolType;
 
 	bool isSym() const
 	{
 		return holds_alternative<SymbolType>(*this);
 	}
 
-	const shared_ptr<Symbol<T>> &
+	const SymbolType
 	getSym() const
 	{
 		return get<SymbolType>(*this);
@@ -71,6 +66,11 @@ struct SymbolOrValue : public variant<T, shared_ptr<Symbol<T>>>
 		return get<T>(*this);
 	}
 };
+
+template <typename T>
+static SymbolOrValue<T> sym(Symbol<T>& symbol) {
+	return SymbolOrValue<T>{ &symbol };
+}
 
 template <typename T>
 static ostream &
@@ -135,7 +135,7 @@ bool bind(SymbolOrValue<VALUE_TYPE> &s, const VALUE_TYPE &v)
 {
 	if (s.isSym())
 	{
-		Symbol<VALUE_TYPE> &symbol = *s.getSym().get();
+		Symbol<VALUE_TYPE> &symbol = *s.getSym();
 		// has the symbol already been bound?
 		if (symbol.isBound())
 		{
@@ -209,19 +209,13 @@ static RELATION_TYPE bind(
 template <typename HEAD_RELATION, typename... BODY_RELATIONs>
 struct Rule
 {
-	const typename HEAD_RELATION::Atom head;
+	typedef Rule Define;
+	typedef typename HEAD_RELATION::Atom HeadType;
+	const HeadType head;
 	typedef tuple<BODY_RELATIONs...> BodyRelations;
 	typedef tuple<typename BODY_RELATIONs::Atom...> BodyType;
 	const BodyType body;
 };
-
-#if 0
-template <typename HEAD_RELATION, typename... BODY_RELATIONs>
-static Rule<HEAD_RELATION, BODY_RELATIONs...> rule(const typename HEAD_RELATION::Atom &head, const tuple<typename BODY_RELATIONs::Atom...> &body)
-{
-	return Rule<HEAD_RELATION, BODY_RELATIONs...>{head, body};
-}
-#endif
 
 template <typename... RELATIONs>
 struct State

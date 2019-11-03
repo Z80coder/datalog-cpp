@@ -31,12 +31,12 @@ int main()
 #endif
     }
     {
-        auto a = symbol<int>();
-        auto b = symbol<int>();
-        Int_Int::Atom r1{{1}, {a}};
-        String_Int::Atom r2{{"world"}, {b}};
-        auto c = symbol<string>();
-        String_Int_String::Atom r3{{"hello"}, {1}, {c}};
+        Symbol<int> a;
+        Symbol<int> b;
+        Int_Int::Atom r1{{1}, sym(a)};
+        String_Int::Atom r2{{"world"}, sym(b)};
+        Symbol<string> c;
+        String_Int_String::Atom r3{{"hello"}, {1}, sym(c)};
     }
 
     {
@@ -49,26 +49,38 @@ int main()
         {
         };
 
-        auto x = symbol<string>();
-        auto y = symbol<string>();
-        auto z = symbol<string>();
+        Symbol<string> x;
+        Symbol<string> y;
+        Symbol<string> z;
 
         // Rule1
-        Adviser::Atom clause1{{x}, {y}};
-        auto rule11 = Rule<AcademicAncestor, Adviser>{
-            {{x}, {y}}, 
+        Adviser::Atom clause1{sym(x), sym(y)};
+        auto rule1 = Rule<AcademicAncestor, Adviser>{
+            {sym(x), sym(y)}, 
             {
-                {{x}, {y}}
+                {sym(x), sym(y)}
             }
+        };
+
+        // Rule1 alternative
+        struct AdviserIsAnAcademicAncestor : Rule<AcademicAncestor, Adviser> {
+            Symbol<string> x, y, z;
+
+            AdviserIsAnAcademicAncestor() : Define{
+                AcademicAncestor::Atom{sym(x), sym(y)}, 
+                {
+                    Adviser::Atom{sym(x), sym(y)}
+                }
+            } {};
         };
 
         // Rule2
         typedef Rule<AcademicAncestor, Adviser, AcademicAncestor> Rule2Type;
         auto rule2 = Rule2Type{
-            {{x}, {z}}, 
+            AcademicAncestor::Atom{sym(x), sym(z)},
             {
-                {{x}, {y}}, 
-                {{y}, {z}}
+                Adviser::Atom{sym(x), sym(y)}, 
+                AcademicAncestor::Atom{sym(y), sym(z)}
             }
         };
 
@@ -78,10 +90,10 @@ int main()
         };
 
         auto query1 = Rule<Query1, AcademicAncestor, AcademicAncestor>{
-            {{x}}, 
+            {sym(x)}, 
             {
-                {{"Robin Milner"}, {x}}, 
-                {{x}, {"Mistral Contrastin"}}
+                {{"Robin Milner"}, sym(x)}, 
+                {sym(x), {"Mistral Contrastin"}}
             }
         };
 
@@ -97,7 +109,7 @@ int main()
         }
 
         // Bind 1 atom with 1 fact
-        Adviser::Atom dummyClause{{x}, {x}};
+        Adviser::Atom dummyClause{sym(x), sym(x)};
         if (bind<Adviser>(dummyClause, fact1))
         {
             cout << "successful bind" << endl;

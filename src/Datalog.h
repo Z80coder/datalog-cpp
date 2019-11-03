@@ -210,6 +210,14 @@ struct Rule
 	const BodyType body;
 };
 
+#if 0
+template <typename HEAD_RELATION, typename... BODY_RELATIONs>
+static Rule<HEAD_RELATION, BODY_RELATIONs...> rule(const typename HEAD_RELATION::Atom &head, const tuple<typename BODY_RELATIONs::Atom...> &body)
+{
+	return Rule<HEAD_RELATION, BODY_RELATIONs...>{head, body};
+}
+#endif
+
 template <typename... RELATIONs>
 struct State
 {

@@ -54,7 +54,7 @@ int main()
         auto z = make_shared<Symbol<string>>();
         // Rule1
         Adviser::Atom clause1{{x}, {y}};
-        Rule<AcademicAncestor, Adviser> rule1{
+        auto rule11 = Rule<AcademicAncestor, Adviser>{
             {{x}, {y}}, 
             {
                 {{x}, {y}}
@@ -63,7 +63,7 @@ int main()
 
         // Rule2
         typedef Rule<AcademicAncestor, Adviser, AcademicAncestor> Rule2Type;
-        Rule2Type rule2{
+        auto rule2 = Rule2Type{
             {{x}, {z}}, 
             {
                 {{x}, {y}}, 
@@ -76,7 +76,7 @@ int main()
         {
         };
 
-        Rule<Query1, AcademicAncestor, AcademicAncestor> query1{
+        auto query1 = Rule<Query1, AcademicAncestor, AcademicAncestor>{
             {{x}}, 
             {
                 {{"Robin Milner"}, {x}}, 

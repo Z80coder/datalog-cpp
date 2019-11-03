@@ -49,9 +49,10 @@ int main()
         {
         };
 
-        auto x = make_shared<Symbol<string>>();
-        auto y = make_shared<Symbol<string>>();
-        auto z = make_shared<Symbol<string>>();
+        auto x = symbol<string>();
+        auto y = symbol<string>();
+        auto z = symbol<string>();
+
         // Rule1
         Adviser::Atom clause1{{x}, {y}};
         auto rule11 = Rule<AcademicAncestor, Adviser>{

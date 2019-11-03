@@ -43,6 +43,11 @@ struct Symbol : optional<T>
 	}
 };
 
+template<typename T>
+shared_ptr<Symbol<T>> symbol() {
+	return make_shared<Symbol<T>>();
+}
+
 template <typename T>
 struct SymbolOrValue : public variant<T, shared_ptr<Symbol<T>>>
 {

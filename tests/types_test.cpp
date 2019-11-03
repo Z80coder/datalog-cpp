@@ -14,19 +14,24 @@ int main() {
     };
 
     {
-        Int r1{{{ 1, 2 }}};
-        Int_Int r2 {{{ {1, 2} }}};
-        Int_Int r3 {{{ {1, 2 }, { 3, 4 } }}};
-        String_Int r4 {{{ { "hello", 1 } }}};
-        String_Int r5 {{{ {"hello", 1 }, { "world", 2 } }}};
-        String_Int_String r6 {{{ { "hello", 1, "world" }, { "world", 2, "hello" }, { "world", 3, "world" } }}};
+        Int::Set r1{ 1, 2 };
+        //Int r1{{{ 1, 2 }}};
+        Int_Int::Set r2 { {1, 2} };
+        //Int_Int r2 {{{ {1, 2} }}};
+        //Int_Int r3 {{{ {1, 2 }, { 3, 4 } }}};
+        Int_Int::Set r3 { {1, 2 }, { 3, 4 } };
+        //String_Int r4 {{{ { "hello", 1 } }}};
+        String_Int::Set r4 { { "hello", 1 } };
+        //String_Int r5 {{{ {"hello", 1 }, { "world", 2 } }}};
+        String_Int::Set r5 { {"hello", 1 }, { "world", 2 } };
+        //String_Int_String r6 {{{ { "hello", 1, "world" }, { "world", 2, "hello" }, { "world", 3, "world" } }}};
+        String_Int_String::Set r6 { { "hello", 1, "world" }, { "world", 2, "hello" }, { "world", 3, "world" } };
 
 #if 0
         String_Int r7 = merge(r4, r5);
 #endif
 
     }
-
     {
         auto a = make_shared<Symbol<int>>();
         auto b = make_shared<Symbol<int>>();
@@ -39,9 +44,14 @@ int main() {
     {
         struct Adviser: Relation<string, string> {
         };
+        /*
         Adviser advisers {{{ { { "Andrew Rice" }, { "Mistral Contrastin" } }, { { "Andy Hopper" }, { "Andrew Rice" } }, { { "Alan Mycroft" }, {
                 "Dominic Orchard" } }, { { "David Wheeler" }, { "Andy Hopper" } }, { { "Rod Burstall" }, { "Alan Mycroft" } }, { { "Robin Milner" }, {
                 "Alan Mycroft" } } }}};
+                */
+        Adviser::Set advisers { { "Andrew Rice", "Mistral Contrastin" }, { "Andy Hopper", "Andrew Rice" }, { "Alan Mycroft",
+                "Dominic Orchard" }, { "David Wheeler", "Andy Hopper" }, { "Rod Burstall", "Alan Mycroft" },
+                { "Robin Milner", "Alan Mycroft" } };
 
         struct AcademicAncestor: Relation<string, string> {
         };
@@ -71,7 +81,8 @@ int main() {
         Rule<Query1, AcademicAncestor, AcademicAncestor> query1 { head3, { clause4, clause5 } };
 
         // Bind 1 atom with 1 fact
-        Adviser::GroundType fact1 { { { "Andrew Rice" } }, { { "Mistral Contrastin" } } };
+        //Adviser::GroundType fact1 { { { "Andrew Rice" } }, { { "Mistral Contrastin" } } };
+        Adviser fact1 {{ "Andrew Rice", "Mistral Contrastin" }};
         if (bind<Adviser>(clause1, fact1)) {
             cout << "successful bind" << endl;
         } else {
@@ -87,13 +98,13 @@ int main() {
         }
 
         // Bind 1 atom with 1 fact
-        Adviser::GroundType fact2 { { { "Mistral Contrastin" } }, { { "Mistral Contrastin" } } };
+        //Adviser::GroundType fact2 { { { "Mistral Contrastin" } }, { { "Mistral Contrastin" } } };
+        Adviser fact2 { { "Mistral Contrastin", "Mistral Contrastin" } };
         if (bind<Adviser>(dummyClause, fact2)) {
             cout << "successful bind" << endl;
         } else {
             cout << "failed bind" << endl;
         }
-
 #if 0
         // Bind 1 atom with a relation (n facts)
         cout << "Should bind with all relations:" << endl;
@@ -109,8 +120,10 @@ int main() {
            it1.next();
         }
 
-        AcademicAncestor dummyAncestors {{{ { { "Fred Bloggs" }, { "Nobby Perkins" } }, { { "Charlie Chopper" }, { "Jim Taylor" } },
-            { { "Cooper Simpson" }, { "Lilly Fairweather" } }}}};
+        //AcademicAncestor dummyAncestors {{{ { { "Fred Bloggs" }, { "Nobby Perkins" } }, { { "Charlie Chopper" }, { "Jim Taylor" } },
+        //    { { "Cooper Simpson" }, { "Lilly Fairweather" } }}}};
+        AcademicAncestor::Set dummyAncestors { { "Fred Bloggs", "Nobby Perkins" }, { "Charlie Chopper", "Jim Taylor" },
+            { "Cooper Simpson", "Lilly Fairweather" } };
         StateType state2{{ advisers, dummyAncestors }};
         auto it2 = state2.iterator();
         while (it2.hasNext()) {
@@ -120,3 +133,22 @@ int main() {
         apply<Rule2Type>(rule2, state1);
     }
 }
+
+#if 0
+template<typename ... Ts>
+struct R {
+   struct G {
+      tuple<Ts...> t;
+   };
+};
+
+void foo() {
+   struct String1 : R<string>{
+   };
+   struct String2 : R<string>{
+   };
+   tuple<String1::G, String2::G> t2;
+   get<String1>(t2);
+
+}
+#endif

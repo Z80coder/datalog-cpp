@@ -31,11 +31,11 @@ int main()
 #endif
     }
     {
-        auto a = make_shared<Symbol<int>>();
-        auto b = make_shared<Symbol<int>>();
+        auto a = symbol<int>();
+        auto b = symbol<int>();
         Int_Int::Atom r1{{1}, {a}};
         String_Int::Atom r2{{"world"}, {b}};
-        auto c = make_shared<Symbol<string>>();
+        auto c = symbol<string>();
         String_Int_String::Atom r3{{"hello"}, {1}, {c}};
     }
 

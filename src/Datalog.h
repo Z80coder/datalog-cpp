@@ -86,7 +86,7 @@ template <typename... Ts>
 struct Relation : tuple<Ts...>
 {
 	typedef tuple<Ts...> Type;
-	typedef tuple<SymbolOrValue<Ts>...> AtomicType;
+	typedef tuple<SymbolOrValue<Ts>...> Atom;
 	using tuple<Ts...>::tuple;
 	struct compare
 	{
@@ -109,7 +109,7 @@ print(ostream &out, const TUPLE_TYPE &s)
 }
 
 template <typename RELATION_TYPE, size_t... Is>
-static void unbind(const typename RELATION_TYPE::AtomicType &tuple,
+static void unbind(const typename RELATION_TYPE::Atom &tuple,
 				   index_sequence<Is...>)
 {
 	// TODO: why can't we use the apply pattern everywhere?
@@ -120,7 +120,7 @@ template <typename... Ts>
 static void unbind(const tuple<SymbolOrValue<Ts>...> &tuple)
 {
 	auto indexSequence = make_index_sequence<
-		tuple_size<typename Relation<Ts...>::AtomicType>::value>{};
+		tuple_size<typename Relation<Ts...>::Atom>::value>{};
 	unbind<Relation<Ts...>>(tuple, indexSequence);
 }
 
@@ -146,7 +146,7 @@ bool bind(SymbolOrValue<VALUE_TYPE> &s, const VALUE_TYPE &v)
 }
 
 template <typename RELATION_TYPE, size_t... Is>
-static bool bind(typename RELATION_TYPE::AtomicType &atom,
+static bool bind(typename RELATION_TYPE::Atom &atom,
 				 const typename RELATION_TYPE::Type &fact, index_sequence<Is...>)
 {
 	bool success = ((bind<Is>(get<Is>(atom), get<Is>(fact))) and ...);
@@ -173,7 +173,7 @@ static bool bind(typename RELATION_TYPE::AtomicType &atom,
 
 // bind 1 atom with 1 fact (of the same relation type)
 template <typename RELATION_TYPE>
-static bool bind(typename RELATION_TYPE::AtomicType &atom,
+static bool bind(typename RELATION_TYPE::Atom &atom,
 				 //const typename RELATION_TYPE::GroundType& fact
 				 const RELATION_TYPE &fact)
 {
@@ -204,9 +204,9 @@ static RELATION_TYPE bind(
 template <typename HEAD_RELATION, typename... BODY_RELATIONs>
 struct Rule
 {
-	const typename HEAD_RELATION::AtomicType head;
+	const typename HEAD_RELATION::Atom head;
 	typedef tuple<BODY_RELATIONs...> BodyRelations;
-	typedef tuple<typename BODY_RELATIONs::AtomicType...> BodyType;
+	typedef tuple<typename BODY_RELATIONs::Atom...> BodyType;
 	const BodyType body;
 };
 
@@ -401,7 +401,7 @@ static void bind(const typename RULE_TYPE::BodyType &atoms,
 
 // bind n atoms (of multiple relation types) with 1 slice (of multiple relation types)
 template <typename RULE_TYPE, typename... RELATIONs>
-static bool bind(const typename RULE_TYPE::BodyType &atoms, // typedef tuple<typename BODY_RELATIONs::AtomicType...> BodyType;
+static bool bind(const typename RULE_TYPE::BodyType &atoms,
 				 const tuple<RELATIONs const *...> &slice)
 {
 	// unbind all the symbols

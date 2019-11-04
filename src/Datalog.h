@@ -20,8 +20,6 @@ using namespace std;
 template <typename T>
 struct Symbol : optional<T>
 {
-	//typedef shared_ptr<Symbol> Type;
-
 	void bind(const T &value)
 	{
 		this->emplace(value);
@@ -148,7 +146,7 @@ static void unbind(const tuple<SymbolOrValue<Ts>...> &tuple)
 }
 
 // bind 1 SymbolOrValue with 1 Value
-template <unsigned int I, typename VALUE_TYPE>
+template <typename VALUE_TYPE>
 bool bind(SymbolOrValue<VALUE_TYPE> &s, const VALUE_TYPE &v)
 {
 	if (s.isSym())
@@ -171,7 +169,7 @@ bool bind(SymbolOrValue<VALUE_TYPE> &s, const VALUE_TYPE &v)
 template <typename ATOM_TYPE, typename GROUND_TYPE, size_t... Is>
 static bool bind(ATOM_TYPE &atom, const GROUND_TYPE &fact, index_sequence<Is...>)
 {
-	bool success = ((bind<Is>(get<Is>(atom), get<Is>(fact))) and ...);
+	bool success = ((bind(get<Is>(atom), get<Is>(fact))) and ...);
 	if (success)
 	{
 		{
@@ -234,6 +232,7 @@ template <typename HEAD_RELATION, typename... BODY_RELATIONs>
 struct Rule
 {
 	typedef Rule Define;
+	typedef HEAD_RELATION HeadRelationType;
 	typedef typename HEAD_RELATION::Atom HeadType;
 	HeadType head;
 	typedef tuple<BODY_RELATIONs...> BodyRelations;
@@ -417,24 +416,28 @@ static bool bind(typename RELATION_TYPE::Atom &atom,
 #endif
 
 template <size_t I, typename RULE_TYPE, typename... RELATIONs>
-static void bind(typename RULE_TYPE::BodyType &atoms, // typedef tuple<typename BODY_RELATIONs::Atom...> BodyType;
+static bool bind(typename RULE_TYPE::BodyType &atoms, // typedef tuple<typename BODY_RELATIONs::Atom...> BodyType;
 				 const tuple<RELATIONs const *...> &slice)
 {
 	// get the fact in the slice that can potentially bind
 	typedef typename tuple_element<I, typename RULE_TYPE::BodyRelations>::type BodyRelationI;
 	auto factPtr = get<BodyRelationI const *>(slice);
-	const BodyRelationI& fact = *factPtr;
-	// get the atom
-	typename BodyRelationI::Atom &atom = get<I>(atoms);
-	// try to bind the atom with the fact
-	bind(atom, fact);
+	bool success = false;
+	if (factPtr) {
+		const BodyRelationI& fact = *factPtr;
+		// get the atom
+		typename BodyRelationI::Atom &atom = get<I>(atoms);
+		// try to bind the atom with the fact
+		success = bind(atom, fact);
+	}
+	return success;
 }
 
 template <typename RULE_TYPE, typename... RELATIONs, size_t... Is>
-static void bind(typename RULE_TYPE::BodyType &atoms,
+static bool bind(typename RULE_TYPE::BodyType &atoms,
 				 const tuple<RELATIONs const *...> &slice, index_sequence<Is...>)
 {
-	((bind<Is, RULE_TYPE, RELATIONs...>(atoms, slice)), ...);
+	return ((bind<Is, RULE_TYPE, RELATIONs...>(atoms, slice)) and ...);
 }
 
 // bind n atoms (of multiple relation types) with 1 slice (of multiple relation types)
@@ -445,73 +448,61 @@ static bool bind(typename RULE_TYPE::BodyType &atoms,
 	// unbind all the symbols
 	unbind<RULE_TYPE>(atoms);
 	// for each atom, bind with corresponding relation type in slice
-	bind<RULE_TYPE, RELATIONs...>(atoms, slice,
+	return bind<RULE_TYPE, RELATIONs...>(atoms, slice,
 								  make_index_sequence<tuple_size<typename RULE_TYPE::BodyType>::value>{});
-	return false;
+}
+
+template <typename VALUE_TYPE>
+void ground(const SymbolOrValue<VALUE_TYPE> &s, VALUE_TYPE &v)
+{
+	if (s.isSym())
+	{
+		Symbol<VALUE_TYPE> &symbol = *s.getSym();
+		assert(symbol.isBound());
+		v = symbol.value();
+	} else {
+		v = s.getVal();
+	}
+}
+
+template <typename RELATION_TYPE, size_t... Is>
+static void ground(const typename RELATION_TYPE::Atom& atom, RELATION_TYPE& groundAtom, index_sequence<Is...>) {
+	((ground(get<Is>(atom), get<Is>(groundAtom))), ...);
+}
+
+template <typename RELATION_TYPE>
+static RELATION_TYPE ground(const typename RELATION_TYPE::Atom& atom) {
+	RELATION_TYPE groundAtom;
+	ground<RELATION_TYPE>(atom, groundAtom, make_index_sequence<tuple_size<typename RELATION_TYPE::Atom>::value>{});
+	return groundAtom;
 }
 
 // apply a rule to state
 template <typename RULE_TYPE, typename... RELATIONs>
-static void apply(RULE_TYPE &rule, const State<RELATIONs...> &state)
+static typename RULE_TYPE::HeadRelationType::Set apply(RULE_TYPE &rule, const State<RELATIONs...> &state)
 {
+	typedef typename RULE_TYPE::HeadRelationType HeadRelationType;
+	typename HeadRelationType::Set derivedFacts;
 	auto it = state.iterator();
 	while (it.hasNext())
 	{
 		auto slice = it.next();
-		// slice is type typedef tuple<typename RELATIONs::GroundType const* ...> SliceType;
-		/*bool success = */ bind<RULE_TYPE, RELATIONs...>(rule.body, slice);
+		if (bind<RULE_TYPE, RELATIONs...>(rule.body, slice)) {
+			// successful bind, therefore add (grounded) head atom to new state
+			cout << "successful bind of body" << endl;
+			auto derivedFact = ground<HeadRelationType>(rule.head);
+			{
+				cout << "adding: ";
+				datalog::print<typename HeadRelationType::TupleType>(cout, derivedFact); // TODO: avoid need for type
+				cout << endl;
+			}
+			derivedFacts.insert(derivedFact);
+		} else {
+			cout << "failed to bind body" << endl;
+		}
 	}
+	return derivedFacts;
 }
-
-#if 0
-template<typename RELATION_TYPE>
-static bool apply(
-const typename RELATION_TYPE::AtomicType& atom,
-const RELATION_TYPE& relation)
-{
- // we have the atom, and some corresponding facts, now bind them
- // but we don't want the ground atoms
- // we want the bound atoms
-
- // to avoid copying symbols we should try and find a complete binding across all relations,
- // and then move to next complete binding etc.
-
- // so basically we want to stream all the combinations of facts, where each combination
- // consists of selecting 1 fact from each relation in the state
-return true;
-}
-
-template<typename RULE_TYPE, typename ... RELATIONs, size_t ... Is>
-static void apply(
-const typename RULE_TYPE::BodyType& body,
-const typename State<RELATIONs...>::RelationsType& relations,
-index_sequence<Is...>
-)
-{
-/*
- * Bind n atoms (of different relation types, such as the body of a rule)
- * with state consisting of
- * n_{i} facts (of different relation types i = 1 ... m)
- */
- // for each atom in body find and bind with corresponding relation
-bool success = ((
-apply<typename tuple_element<Is, typename State<RELATIONs...>::RelationsType>::type>(
-    get<Is>(body),
-    get<typename tuple_element<Is, typename State<RELATIONs...>::RelationsType>::type>(relations)
-)) and ...);
-}
-
-// bind a rule body to a tuple of relations
-template<typename RULE_TYPE, typename ... RELATIONs>
-static void apply(
-const typename RULE_TYPE::BodyType& body,
-const typename State<RELATIONs...>::RelationsType& relations
-)
-{
-apply<RULE_TYPE, RELATIONs...>(body, relations, make_index_sequence<tuple_size<typename RULE_TYPE::BodyType>::value>
-{});
-}
-#endif
 
 #if 0
 template<typename RELATION_TYPE>

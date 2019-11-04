@@ -125,7 +125,7 @@ int main()
         {
             cout << "successful bind" << endl;
         }
-        else
+       else
         {
             cout << "failed bind" << endl;
         }
@@ -153,6 +153,7 @@ int main()
             it2.next();
         }
 
-        apply<Rule2Type>(rule2, state1);
+        auto derivedFacts1 = apply<Rule2Type>(rule2, state1);
+        auto derivedFacts2 = apply<decltype(rule1)>(rule1, state1);
     }
 }

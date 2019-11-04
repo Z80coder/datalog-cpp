@@ -43,9 +43,9 @@ struct Symbol : optional<T>
 };
 
 template <typename T>
-struct SymbolOrValue : public variant<T, Symbol<T>*>
+struct SymbolOrValue : public variant<T, Symbol<T> *>
 {
-	typedef Symbol<T>* SymbolType;
+	typedef Symbol<T> *SymbolType;
 
 	bool isSym() const
 	{
@@ -66,8 +66,9 @@ struct SymbolOrValue : public variant<T, Symbol<T>*>
 };
 
 template <typename T>
-static SymbolOrValue<T> sym(Symbol<T>& symbol) {
-	return SymbolOrValue<T>{ &symbol };
+static SymbolOrValue<T> sym(Symbol<T> &symbol)
+{
+	return SymbolOrValue<T>{&symbol};
 }
 
 template <typename T>
@@ -240,12 +241,19 @@ struct Rule
 	BodyType body;
 };
 
+// TODO: push this through to avoid reinterpret_casts
+template<typename RELATION_TYPE>
+struct Set {
+	typename RELATION_TYPE::Set set;
+};
+
 template <typename... RELATIONs>
 struct State
 {
-	typedef tuple<typename RELATIONs::Set...> RelationsType;
-	RelationsType relations;
-	typedef tuple<const RELATIONs*...> SliceType;
+	//typedef tuple<typename RELATIONs::Set...> SetsOfRelationsType;
+	typedef tuple<Set<RELATIONs>...> SetsOfRelationsType;
+	SetsOfRelationsType relations;
+	typedef tuple<const RELATIONs *...> SliceType;
 	typedef tuple<typename RELATIONs::Set::const_iterator...> IteratorsArrayType;
 
 	template <typename TUPLE_TYPE>
@@ -268,20 +276,20 @@ struct State
 
 	struct Iterator
 	{
-		Iterator(const RelationsType &relations) : relations(relations), iterators(initIterators(relations))
+		Iterator(const SetsOfRelationsType &relations) : relations(relations), iterators(initIterators(relations))
 		{
 		}
 
 	private:
 		template <size_t I, typename RELATION_TYPE>
 		void pick(const typename RELATION_TYPE::Set &relation,
-				  const RELATION_TYPE*&sliceElement)
+				  const RELATION_TYPE *&sliceElement)
 		{
 			const auto &it = get<I>(iterators);
 			if (it != relation.end())
 			{
 				// TODO: avoid cast if possible
-				sliceElement = reinterpret_cast<const RELATION_TYPE*>(&*it);
+				sliceElement = reinterpret_cast<const RELATION_TYPE *>(&*it);
 			}
 			else
 			{
@@ -290,29 +298,32 @@ struct State
 		}
 
 		template <size_t... Is>
-		void pick(const RelationsType &relations, SliceType &slice,
+		void pick(const SetsOfRelationsType &relations, SliceType &slice,
 				  index_sequence<Is...>)
 		{
 			//cout << "[" << endl;
-			((pick<Is>(get<Is>(relations), get<Is>(slice))), ...);
+			//((pick<Is>(get<Is>(relations), get<Is>(slice))), ...);
+			((pick<Is>(get<Is>(relations).set, get<Is>(slice))), ...);
 			//cout << "]" << endl;
 		}
 
 		template <size_t I>
-		bool next(const RelationsType &relations, IteratorsArrayType &iterators,
+		bool next(const SetsOfRelationsType &relations, IteratorsArrayType &iterators,
 				  bool &stop)
 		{
 			bool iterationFinished = false;
 			if (not stop)
 			{
 				auto &it = get<I>(iterators);
-				const auto &end = get<I>(relations).end();
+				//const auto &end = get<I>(relations).end();
+				const auto &end = get<I>(relations).set.end();
 				if (it != end)
 					it++;
 				if (it == end)
 				{
-					it = get<I>(relations).begin();
-					if (I == tuple_size<RelationsType>::value - 1)
+					//it = get<I>(relations).begin();
+					it = get<I>(relations).set.begin();
+					if (I == tuple_size<SetsOfRelationsType>::value - 1)
 					{
 						iterationFinished = true;
 					}
@@ -326,7 +337,7 @@ struct State
 		}
 
 		template <size_t... Is>
-		bool next(const RelationsType &relations, IteratorsArrayType &iterators,
+		bool next(const SetsOfRelationsType &relations, IteratorsArrayType &iterators,
 				  index_sequence<Is...>)
 		{
 			bool stop = false;
@@ -342,7 +353,7 @@ struct State
 		SliceType next()
 		{
 			SliceType slice;
-			auto indexSequence = make_index_sequence<tuple_size<RelationsType>::value>{};
+			auto indexSequence = make_index_sequence<tuple_size<SetsOfRelationsType>::value>{};
 			pick(relations, slice, indexSequence);
 			iterationFinished = next(relations, iterators, indexSequence);
 			{
@@ -354,7 +365,7 @@ struct State
 		}
 
 	private:
-		const RelationsType &relations;
+		const SetsOfRelationsType &relations;
 		IteratorsArrayType iterators;
 		bool iterationFinished = false;
 
@@ -366,13 +377,14 @@ struct State
 		}
 
 		template <size_t... Is>
-		static void initIterators(const RelationsType &relations,
+		static void initIterators(const SetsOfRelationsType &relations,
 								  IteratorsArrayType &iterators, index_sequence<Is...>)
 		{
-			((initIterator(get<Is>(relations), get<Is>(iterators))), ...);
+			//((initIterator(get<Is>(relations), get<Is>(iterators))), ...);
+			((initIterator(get<Is>(relations).set, get<Is>(iterators))), ...);
 		}
 
-		static IteratorsArrayType initIterators(const RelationsType &relations)
+		static IteratorsArrayType initIterators(const SetsOfRelationsType &relations)
 		{
 			IteratorsArrayType iterators;
 			initIterators(relations, iterators,
@@ -423,8 +435,9 @@ static bool bind(typename RULE_TYPE::BodyType &atoms, // typedef tuple<typename 
 	typedef typename tuple_element<I, typename RULE_TYPE::BodyRelations>::type BodyRelationI;
 	auto factPtr = get<BodyRelationI const *>(slice);
 	bool success = false;
-	if (factPtr) {
-		const BodyRelationI& fact = *factPtr;
+	if (factPtr)
+	{
+		const BodyRelationI &fact = *factPtr;
 		// get the atom
 		typename BodyRelationI::Atom &atom = get<I>(atoms);
 		// try to bind the atom with the fact
@@ -449,7 +462,7 @@ static bool bind(typename RULE_TYPE::BodyType &atoms,
 	unbind<RULE_TYPE>(atoms);
 	// for each atom, bind with corresponding relation type in slice
 	return bind<RULE_TYPE, RELATIONs...>(atoms, slice,
-								  make_index_sequence<tuple_size<typename RULE_TYPE::BodyType>::value>{});
+										 make_index_sequence<tuple_size<typename RULE_TYPE::BodyType>::value>{});
 }
 
 template <typename VALUE_TYPE>
@@ -460,18 +473,22 @@ void ground(const SymbolOrValue<VALUE_TYPE> &s, VALUE_TYPE &v)
 		Symbol<VALUE_TYPE> &symbol = *s.getSym();
 		assert(symbol.isBound());
 		v = symbol.value();
-	} else {
+	}
+	else
+	{
 		v = s.getVal();
 	}
 }
 
 template <typename RELATION_TYPE, size_t... Is>
-static void ground(const typename RELATION_TYPE::Atom& atom, RELATION_TYPE& groundAtom, index_sequence<Is...>) {
+static void ground(const typename RELATION_TYPE::Atom &atom, RELATION_TYPE &groundAtom, index_sequence<Is...>)
+{
 	((ground(get<Is>(atom), get<Is>(groundAtom))), ...);
 }
 
 template <typename RELATION_TYPE>
-static RELATION_TYPE ground(const typename RELATION_TYPE::Atom& atom) {
+static RELATION_TYPE ground(const typename RELATION_TYPE::Atom &atom)
+{
 	RELATION_TYPE groundAtom;
 	ground<RELATION_TYPE>(atom, groundAtom, make_index_sequence<tuple_size<typename RELATION_TYPE::Atom>::value>{});
 	return groundAtom;
@@ -479,15 +496,16 @@ static RELATION_TYPE ground(const typename RELATION_TYPE::Atom& atom) {
 
 // apply a rule to state
 template <typename RULE_TYPE, typename... RELATIONs>
-static typename RULE_TYPE::HeadRelationType::Set apply(RULE_TYPE &rule, const State<RELATIONs...> &state)
+static Set<typename RULE_TYPE::HeadRelationType> apply(RULE_TYPE &rule, const State<RELATIONs...> &state)
 {
 	typedef typename RULE_TYPE::HeadRelationType HeadRelationType;
-	typename HeadRelationType::Set derivedFacts;
+	Set<HeadRelationType> derivedFacts;
 	auto it = state.iterator();
 	while (it.hasNext())
 	{
 		auto slice = it.next();
-		if (bind<RULE_TYPE, RELATIONs...>(rule.body, slice)) {
+		if (bind<RULE_TYPE, RELATIONs...>(rule.body, slice))
+		{
 			// successful bind, therefore add (grounded) head atom to new state
 			cout << "successful bind of body" << endl;
 			auto derivedFact = ground<HeadRelationType>(rule.head);
@@ -496,25 +514,33 @@ static typename RULE_TYPE::HeadRelationType::Set apply(RULE_TYPE &rule, const St
 				datalog::print<typename HeadRelationType::TupleType>(cout, derivedFact); // TODO: avoid need for type
 				cout << endl;
 			}
-			derivedFacts.insert(derivedFact);
-		} else {
+			derivedFacts.set.insert(derivedFact);
+		}
+		else
+		{
 			cout << "failed to bind body" << endl;
 		}
 	}
 	return derivedFacts;
 }
 
-#if 0
-template<typename RELATION_TYPE>
-static RELATION_TYPE merge(const RELATION_TYPE& r1, const RELATION_TYPE& r2)
+template <typename RELATION_TYPE>
+static Set<RELATION_TYPE> merge(const Set<RELATION_TYPE>&s1, const Set<RELATION_TYPE>&s2)
 {
-set<typename RELATION_TYPE::GroundType> tuples
-{r1.tuples};
-tuples.insert(r2.tuples.begin(), r2.tuples.end());
-return RELATION_TYPE
-{tuples};
+	Set<RELATION_TYPE> s3{s1};
+	s3.set.insert(s2.set.begin(), s2.set.end());
+	return s3;
 }
-#endif
+
+template <typename RELATION_TYPE, typename ... RELATIONs>
+static State<RELATIONs...> add(const State<RELATIONs...> &state, const Set<RELATION_TYPE>& facts) {
+	typedef State<RELATIONs...> StateType;
+	StateType newState{state};
+	typedef Set<RELATION_TYPE> SetType;
+	auto relation = get<SetType>(newState.relations);
+	relation = merge(relation, facts);
+	return newState;
+}
 
 } // namespace datalog
 

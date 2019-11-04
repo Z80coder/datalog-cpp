@@ -138,7 +138,8 @@ int main()
 #endif
 
         typedef State<Adviser, AcademicAncestor> StateType;
-        StateType state1{{advisers, {}}};
+        //StateType state1{{advisers, {}}};
+        StateType state1{{{advisers}, {{}}}};
         auto it1 = state1.iterator();
         while (it1.hasNext())
         {
@@ -146,14 +147,17 @@ int main()
         }
 
         AcademicAncestor::Set dummyAncestors{{"Fred Bloggs", "Nobby Perkins"}, {"Charlie Chopper", "Jim Taylor"}, {"Cooper Simpson", "Lilly Fairweather"}};
-        StateType state2{{advisers, dummyAncestors}};
+        //StateType state2{{advisers, dummyAncestors}};
+        StateType state2{{{advisers}, {dummyAncestors}}};
         auto it2 = state2.iterator();
         while (it2.hasNext())
         {
             it2.next();
         }
 
+        // TODO: try to remove need for specifying rule type
         auto derivedFacts1 = apply<Rule2Type>(rule2, state1);
         auto derivedFacts2 = apply<decltype(rule1)>(rule1, state1);
+        auto newState = add(state1, derivedFacts2);
     }
 }

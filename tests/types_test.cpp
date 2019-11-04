@@ -99,7 +99,7 @@ int main()
 
         // Bind 1 atom with 1 fact
         Adviser fact1{{"Andrew Rice", "Mistral Contrastin"}};
-        if (bind<Adviser>(clause1, fact1))
+        if (bind(clause1, fact1))
         {
             cout << "successful bind" << endl;
         }
@@ -110,7 +110,7 @@ int main()
 
         // Bind 1 atom with 1 fact
         Adviser::Atom dummyClause{sym(x), sym(x)};
-        if (bind<Adviser>(dummyClause, fact1))
+        if (bind(dummyClause, fact1))
         {
             cout << "successful bind" << endl;
         }
@@ -121,7 +121,7 @@ int main()
 
         // Bind 1 atom with 1 fact
         Adviser fact2{{"Mistral Contrastin", "Mistral Contrastin"}};
-        if (bind<Adviser>(dummyClause, fact2))
+        if (bind(dummyClause, fact2))
         {
             cout << "successful bind" << endl;
         }

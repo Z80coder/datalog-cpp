@@ -90,7 +90,7 @@ operator<<(ostream &out, const SymbolOrValue<T> &s)
 template <typename... Ts>
 struct Relation : tuple<Ts...>
 {
-	typedef tuple<Ts...> Type;
+	typedef tuple<Ts...> TupleType;
 	typedef tuple<SymbolOrValue<Ts>...> Atom;
 	using tuple<Ts...>::tuple;
 	struct compare
@@ -102,6 +102,24 @@ struct Relation : tuple<Ts...>
 	};
 	typedef set<Relation, compare> Set;
 };
+
+#if 0
+template <std::size_t I, typename ...Ts>
+decltype(auto) get(Relation<Ts...>&& v)
+{
+    return std::get<I>(static_cast<std::tuple<Ts...>&&>(v));
+}
+template <std::size_t I, typename ...Ts>
+decltype(auto) get(Relation<Ts...>& v)
+{
+    return std::get<I>(static_cast<std::tuple<Ts...>&>(v));
+}
+template <std::size_t I, typename ...Ts>
+decltype(auto) get(Relation<Ts...> const& v)
+{
+    return std::get<I>(static_cast<std::tuple<Ts...> const&>(v));
+}
+#endif
 
 template <typename TUPLE_TYPE>
 static ostream &
@@ -150,9 +168,8 @@ bool bind(SymbolOrValue<VALUE_TYPE> &s, const VALUE_TYPE &v)
 	return true;
 }
 
-template <typename RELATION_TYPE, size_t... Is>
-static bool bind(typename RELATION_TYPE::Atom &atom,
-				 const typename RELATION_TYPE::Type &fact, index_sequence<Is...>)
+template <typename ATOM_TYPE, typename GROUND_TYPE, size_t... Is>
+static bool bind(ATOM_TYPE &atom, const GROUND_TYPE &fact, index_sequence<Is...>)
 {
 	bool success = ((bind<Is>(get<Is>(atom), get<Is>(fact))) and ...);
 	if (success)
@@ -177,16 +194,23 @@ static bool bind(typename RELATION_TYPE::Atom &atom,
 }
 
 // bind 1 atom with 1 fact (of the same relation type)
-template <typename RELATION_TYPE>
-static bool bind(typename RELATION_TYPE::Atom &atom,
-				 //const typename RELATION_TYPE::GroundType& fact
-				 const RELATION_TYPE &fact)
+#if 0
+template <typename ATOM_TYPE, typename GROUND_TYPE>
+static bool bind(ATOM_TYPE &atom, const GROUND_TYPE &fact)
 {
 	//unbind<RELATION_TYPE>(atom);
-	//constexpr size_t tupleSize = tuple_size<typename RELATION_TYPE::GroundType::Type>::value;
-	constexpr size_t tupleSize = tuple_size<typename RELATION_TYPE::Type>::value;
-	return bind<RELATION_TYPE>(atom, fact, make_index_sequence<tupleSize>{});
+	constexpr size_t tupleSize = tuple_size<typename GROUND_TYPE::TupleType>::value;
+	return bind<ATOM_TYPE, typename GROUND_TYPE::TupleType>(atom, fact, make_index_sequence<tupleSize>{});
 }
+#else
+template <typename RELATION_TYPE>
+static bool bind(typename RELATION_TYPE::Atom &atom, const RELATION_TYPE &fact)
+{
+	//unbind<RELATION_TYPE>(atom);
+	constexpr size_t tupleSize = tuple_size<typename RELATION_TYPE::TupleType>::value;
+	return bind<typename RELATION_TYPE::Atom, typename RELATION_TYPE::TupleType>(atom, fact, make_index_sequence<tupleSize>{});
+}
+#endif
 
 #if 0
 // bind 1 atom with a relation (n facts)
@@ -211,10 +235,10 @@ struct Rule
 {
 	typedef Rule Define;
 	typedef typename HEAD_RELATION::Atom HeadType;
-	const HeadType head;
+	HeadType head;
 	typedef tuple<BODY_RELATIONs...> BodyRelations;
 	typedef tuple<typename BODY_RELATIONs::Atom...> BodyType;
-	const BodyType body;
+	BodyType body;
 };
 
 template <typename... RELATIONs>
@@ -222,7 +246,7 @@ struct State
 {
 	typedef tuple<typename RELATIONs::Set...> RelationsType;
 	RelationsType relations;
-	typedef tuple<RELATIONs const *...> SliceType;
+	typedef tuple<const RELATIONs*...> SliceType;
 	typedef tuple<typename RELATIONs::Set::const_iterator...> IteratorsArrayType;
 
 	template <typename TUPLE_TYPE>
@@ -231,7 +255,7 @@ struct State
 	{
 		if (p)
 		{
-			datalog::print<typename TUPLE_TYPE::Type>(out, *p);
+			datalog::print<typename TUPLE_TYPE::TupleType>(out, *p);
 		}
 		return out;
 	}
@@ -252,13 +276,13 @@ struct State
 	private:
 		template <size_t I, typename RELATION_TYPE>
 		void pick(const typename RELATION_TYPE::Set &relation,
-				  RELATION_TYPE const *&sliceElement)
+				  const RELATION_TYPE*&sliceElement)
 		{
 			const auto &it = get<I>(iterators);
 			if (it != relation.end())
 			{
-				// NASTY: fix this
-				sliceElement = reinterpret_cast<RELATION_TYPE const *>(&*it);
+				// TODO: avoid cast if possible
+				sliceElement = reinterpret_cast<const RELATION_TYPE*>(&*it);
 			}
 			else
 			{
@@ -288,7 +312,6 @@ struct State
 					it++;
 				if (it == end)
 				{
-					//it = get<I>(relations).tuples.begin();
 					it = get<I>(relations).begin();
 					if (I == tuple_size<RelationsType>::value - 1)
 					{
@@ -361,8 +384,7 @@ struct State
 
 	Iterator iterator() const
 	{
-		Iterator it{
-			relations};
+		Iterator it{relations};
 		return it;
 	}
 };
@@ -381,26 +403,35 @@ static void unbind(const typename RULE_TYPE::BodyType &atoms)
 					  make_index_sequence<tuple_size<typename RULE_TYPE::BodyType>::value>{});
 }
 
+#if 0
+// bind 1 atom with 1 fact (of the same relation type)
+template <typename RELATION_TYPE>
+static bool bind(typename RELATION_TYPE::Atom &atom,
+				 const RELATION_TYPE &fact)
+{
+	//unbind<RELATION_TYPE>(atom);
+	//constexpr size_t tupleSize = tuple_size<typename RELATION_TYPE::Type>::value;
+	constexpr size_t tupleSize = tuple_size<typename RELATION_TYPE::TupleType>::value;
+	return bind<RELATION_TYPE>(atom, fact, make_index_sequence<tupleSize>{});
+}
+#endif
+
 template <size_t I, typename RULE_TYPE, typename... RELATIONs>
-static void bind(const typename RULE_TYPE::BodyType &atoms,
+static void bind(typename RULE_TYPE::BodyType &atoms, // typedef tuple<typename BODY_RELATIONs::Atom...> BodyType;
 				 const tuple<RELATIONs const *...> &slice)
 {
-	auto &atom = get<I>(atoms);
+	// get the fact in the slice that can potentially bind
 	typedef typename tuple_element<I, typename RULE_TYPE::BodyRelations>::type BodyRelationI;
-	const auto &factPtr = get<BodyRelationI const *>(slice);
-	//((bind()), ...)
-
-// TODO: atom type is SymbolOrValue but ground type is not
-#if 0
-    ((bind<Relation<typename tuple_element<Is, const typename RULE_TYPE::BodyType>::type>>(
-            get<Is>(atoms),
-            (get<typename Relation<typename tuple_element<Is, const typename RULE_TYPE::BodyType>::type>::GroundType>(slice))
-            )), ...);
-#endif
+	auto factPtr = get<BodyRelationI const *>(slice);
+	const BodyRelationI& fact = *factPtr;
+	// get the atom
+	typename BodyRelationI::Atom &atom = get<I>(atoms);
+	// try to bind the atom with the fact
+	bind(atom, fact);
 }
 
 template <typename RULE_TYPE, typename... RELATIONs, size_t... Is>
-static void bind(const typename RULE_TYPE::BodyType &atoms,
+static void bind(typename RULE_TYPE::BodyType &atoms,
 				 const tuple<RELATIONs const *...> &slice, index_sequence<Is...>)
 {
 	((bind<Is, RULE_TYPE, RELATIONs...>(atoms, slice)), ...);
@@ -408,7 +439,7 @@ static void bind(const typename RULE_TYPE::BodyType &atoms,
 
 // bind n atoms (of multiple relation types) with 1 slice (of multiple relation types)
 template <typename RULE_TYPE, typename... RELATIONs>
-static bool bind(const typename RULE_TYPE::BodyType &atoms,
+static bool bind(typename RULE_TYPE::BodyType &atoms,
 				 const tuple<RELATIONs const *...> &slice)
 {
 	// unbind all the symbols
@@ -421,7 +452,7 @@ static bool bind(const typename RULE_TYPE::BodyType &atoms,
 
 // apply a rule to state
 template <typename RULE_TYPE, typename... RELATIONs>
-static void apply(const RULE_TYPE &rule, const State<RELATIONs...> &state)
+static void apply(RULE_TYPE &rule, const State<RELATIONs...> &state)
 {
 	auto it = state.iterator();
 	while (it.hasNext())

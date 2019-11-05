@@ -56,33 +56,25 @@ int main()
         // Rule1
         Adviser::Atom clause1{sym(x), sym(y)};
         auto rule1 = Rule<AcademicAncestor, Adviser>{
-            {sym(x), sym(y)}, 
-            {
-                {sym(x), sym(y)}
-            }
-        };
+            {sym(x), sym(y)},
+            {{sym(x), sym(y)}}};
 
         // Rule1 alternative
-        struct AdviserIsAnAcademicAncestor : Rule<AcademicAncestor, Adviser> {
+        struct AdviserIsAnAcademicAncestor : Rule<AcademicAncestor, Adviser>
+        {
             Symbol<string> x, y, z;
 
             AdviserIsAnAcademicAncestor() : Define{
-                AcademicAncestor::Atom{sym(x), sym(y)}, 
-                {
-                    Adviser::Atom{sym(x), sym(y)}
-                }
-            } {};
+                                                AcademicAncestor::Atom{sym(x), sym(y)},
+                                                {Adviser::Atom{sym(x), sym(y)}}} {};
         };
 
         // Rule2
         typedef Rule<AcademicAncestor, Adviser, AcademicAncestor> Rule2Type;
         auto rule2 = Rule2Type{
             AcademicAncestor::Atom{sym(x), sym(z)},
-            {
-                Adviser::Atom{sym(x), sym(y)}, 
-                AcademicAncestor::Atom{sym(y), sym(z)}
-            }
-        };
+            {Adviser::Atom{sym(x), sym(y)},
+             AcademicAncestor::Atom{sym(y), sym(z)}}};
 
         // Query1
         struct Query1 : Relation<string>
@@ -90,12 +82,9 @@ int main()
         };
 
         auto query1 = Rule<Query1, AcademicAncestor, AcademicAncestor>{
-            {sym(x)}, 
-            {
-                {{"Robin Milner"}, sym(x)}, 
-                {sym(x), {"Mistral Contrastin"}}
-            }
-        };
+            {sym(x)},
+            {{{"Robin Milner"}, sym(x)},
+             {sym(x), {"Mistral Contrastin"}}}};
 
         // Bind 1 atom with 1 fact
         Adviser fact1{{"Andrew Rice", "Mistral Contrastin"}};
@@ -125,7 +114,7 @@ int main()
         {
             cout << "successful bind" << endl;
         }
-       else
+        else
         {
             cout << "failed bind" << endl;
         }
@@ -157,7 +146,16 @@ int main()
 
         // TODO: try to remove need for specifying rule type
         auto derivedFacts1 = apply<Rule2Type>(rule2, state1);
+
+        cout << "before = ";
+        state1.print(cout);
+        cout << endl;
         auto derivedFacts2 = apply<decltype(rule1)>(rule1, state1);
+        //cout << "new derived facts = ";
+        //derivedFacts2.print(cout);
         auto newState = add(state1, derivedFacts2);
+        cout << "after = ";
+        newState.print(cout);
+        cout << endl;
     }
 }

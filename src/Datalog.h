@@ -124,8 +124,8 @@ template <typename TUPLE_TYPE>
 static ostream &
 print(ostream &out, const TUPLE_TYPE &s)
 {
-	out << " [";
-	apply([&out](auto &&... args) { ((out << " [" << args << "] "), ...); }, s);
+	out << "[";
+	apply([&out](auto &&... args) { ((out << "[" << args << "]"), ...); }, s);
 	out << "] ";
 	return out;
 }
@@ -173,6 +173,7 @@ static bool bind(ATOM_TYPE &atom, const GROUND_TYPE &fact, index_sequence<Is...>
 	bool success = ((bind(get<Is>(atom), get<Is>(fact))) and ...);
 	if (success)
 	{
+		#if 0
 		{
 			cout << "bound ";
 			print(cout, atom);
@@ -180,14 +181,17 @@ static bool bind(ATOM_TYPE &atom, const GROUND_TYPE &fact, index_sequence<Is...>
 			print(cout, fact);
 			cout << endl;
 		}
+		#endif
 	}
 	else
 	{
+		#if 0
 		cout << "failed to bind ";
 		print(cout, atom);
 		cout << " with ";
 		print(cout, fact);
 		cout << endl;
+		#endif
 	}
 	return success;
 }
@@ -245,17 +249,36 @@ struct Rule
 template<typename RELATION_TYPE>
 struct Set {
 	typename RELATION_TYPE::Set set;
+
+	ostream & print(ostream &out)
+	{
+		out << "\"" << typeid(*this).name() << "\"" << endl;
+		for (const auto& tuple : set) {
+			datalog::print<typename RELATION_TYPE::TupleType>(out, tuple);
+			out << endl;
+		}
+		return out;
+	}
+
 };
 
 template <typename... RELATIONs>
 struct State
 {
-	//typedef tuple<typename RELATIONs::Set...> SetsOfRelationsType;
 	typedef tuple<Set<RELATIONs>...> SetsOfRelationsType;
 	SetsOfRelationsType relations;
 	typedef tuple<const RELATIONs *...> SliceType;
 	typedef tuple<typename RELATIONs::Set::const_iterator...> IteratorsArrayType;
 
+	ostream & print(ostream &out)
+	{
+		out << "[";
+		apply([&out](auto &&... args) { ((args.print(out)), ...); }, relations);
+		out << "] ";
+		return out;
+	}
+
+	// Next 2 functions for printing slices. TODO: consolidate printing functions
 	template <typename TUPLE_TYPE>
 	static ostream &
 	print(ostream &out, TUPLE_TYPE const *p)
@@ -315,13 +338,11 @@ struct State
 			if (not stop)
 			{
 				auto &it = get<I>(iterators);
-				//const auto &end = get<I>(relations).end();
 				const auto &end = get<I>(relations).set.end();
 				if (it != end)
 					it++;
 				if (it == end)
 				{
-					//it = get<I>(relations).begin();
 					it = get<I>(relations).set.begin();
 					if (I == tuple_size<SetsOfRelationsType>::value - 1)
 					{
@@ -356,11 +377,13 @@ struct State
 			auto indexSequence = make_index_sequence<tuple_size<SetsOfRelationsType>::value>{};
 			pick(relations, slice, indexSequence);
 			iterationFinished = next(relations, iterators, indexSequence);
+			#if 0
 			{
 				cout << "slice = ";
 				print(cout, slice);
 				cout << endl;
 			}
+			#endif
 			return slice;
 		}
 
@@ -380,7 +403,6 @@ struct State
 		static void initIterators(const SetsOfRelationsType &relations,
 								  IteratorsArrayType &iterators, index_sequence<Is...>)
 		{
-			//((initIterator(get<Is>(relations), get<Is>(iterators))), ...);
 			((initIterator(get<Is>(relations).set, get<Is>(iterators))), ...);
 		}
 
@@ -507,18 +529,20 @@ static Set<typename RULE_TYPE::HeadRelationType> apply(RULE_TYPE &rule, const St
 		if (bind<RULE_TYPE, RELATIONs...>(rule.body, slice))
 		{
 			// successful bind, therefore add (grounded) head atom to new state
-			cout << "successful bind of body" << endl;
+			//cout << "successful bind of body" << endl;
 			auto derivedFact = ground<HeadRelationType>(rule.head);
+			#if 0
 			{
 				cout << "adding: ";
 				datalog::print<typename HeadRelationType::TupleType>(cout, derivedFact); // TODO: avoid need for type
 				cout << endl;
 			}
+			#endif
 			derivedFacts.set.insert(derivedFact);
 		}
 		else
 		{
-			cout << "failed to bind body" << endl;
+			//cout << "failed to bind body" << endl;
 		}
 	}
 	return derivedFacts;
@@ -537,7 +561,7 @@ static State<RELATIONs...> add(const State<RELATIONs...> &state, const Set<RELAT
 	typedef State<RELATIONs...> StateType;
 	StateType newState{state};
 	typedef Set<RELATION_TYPE> SetType;
-	auto relation = get<SetType>(newState.relations);
+	auto& relation = get<SetType>(newState.relations);
 	relation = merge(relation, facts);
 	return newState;
 }

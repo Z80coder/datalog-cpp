@@ -151,6 +151,7 @@ bool bind(SymbolOrValue<VALUE_TYPE> &s, const VALUE_TYPE &v)
 			// is it a consistent binding?
 			if (!(symbol.value() == v))
 			{
+				cout << "symbol bound to " << symbol.value() << " and therefore cannot be bound to " << v << endl;
 				return false;
 			}
 		}
@@ -165,7 +166,7 @@ static bool bind(ATOM_TYPE &atom, const GROUND_TYPE &fact, index_sequence<Is...>
 	bool success = ((bind(get<Is>(atom), get<Is>(fact))) and ...);
 	if (success)
 	{
-		#if 0
+		#if 1
 		{
 			cout << "bound ";
 			print(cout, atom);
@@ -177,7 +178,7 @@ static bool bind(ATOM_TYPE &atom, const GROUND_TYPE &fact, index_sequence<Is...>
 	}
 	else
 	{
-		#if 0
+		#if 1
 		cout << "failed to bind ";
 		print(cout, atom);
 		cout << " with ";
@@ -352,7 +353,7 @@ struct State
 			auto indexSequence = make_index_sequence<tuple_size<SetsOfRelationsType>::value>{};
 			pick(relations, slice, indexSequence);
 			iterationFinished = next(relations, iterators, indexSequence);
-			#if 0
+			#if 1
 			{
 				cout << "slice = ";
 				print(cout, slice);
@@ -482,6 +483,9 @@ static RELATION_TYPE ground(const typename RELATION_TYPE::Atom &atom)
 template <typename RULE_TYPE, typename STATE_TYPE>
 static Set<typename RULE_TYPE::HeadRelationType> applyRule(RULE_TYPE &rule, const STATE_TYPE &state)
 {
+	cout << endl;
+	cout << "applying rule " << typeid(rule).name() << endl;
+
 	typedef typename RULE_TYPE::HeadRelationType HeadRelationType;
 	Set<HeadRelationType> derivedFacts;
 	auto it = state.iterator();

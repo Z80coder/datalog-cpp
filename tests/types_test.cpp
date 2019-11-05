@@ -124,7 +124,7 @@ int main()
             Query() : Define{
                           QueryResult::Atom{sym(x)},
                           {AcademicAncestor::Atom{{"Robin Milner"}, sym(x)},
-                           AcademicAncestor::Atom{sym(x), {"Mistral Contrastin"}}}} {};
+                           AcademicAncestor::Atom{sym(x), {"Dominic Orchard"}}}} {};
         };
 
 #if 0

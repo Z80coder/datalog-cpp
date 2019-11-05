@@ -91,46 +91,48 @@ int main()
         }
 #endif
 
-        // Rule1 alternative
+        // Rule1
         struct DirectAdviserIsAnAcademicAncestor : Rule<AcademicAncestor, Adviser>
         {
             Symbol<string> x, y;
 
             DirectAdviserIsAnAcademicAncestor() : Define{
-                                                AcademicAncestor::Atom{sym(x), sym(y)},
-                                                {Adviser::Atom{sym(x), sym(y)}}} {};
+                                                      AcademicAncestor::Atom{sym(x), sym(y)},
+                                                      {Adviser::Atom{sym(x), sym(y)}}} {};
         };
 
-        // Rule2 alternative
+        // Rule2
         struct IndirectAdviserIsAnAcademicAncestor : Rule<AcademicAncestor, Adviser, AcademicAncestor>
         {
             Symbol<string> x, y, z;
 
             IndirectAdviserIsAnAcademicAncestor() : Define{
-                                                AcademicAncestor::Atom{sym(x), sym(z)},
-                                                {
-                                                    Adviser::Atom{sym(x), sym(y)},
-                                                    AcademicAncestor::Atom{sym(y), sym(z)}
-                                                }} {};
+                                                        AcademicAncestor::Atom{sym(x), sym(z)},
+                                                        {Adviser::Atom{sym(x), sym(y)},
+                                                         AcademicAncestor::Atom{sym(y), sym(z)}}} {};
         };
 
-#if 0
-        // Query1
-        struct Query1 : Relation<string>
+        // Query
+        struct QueryResult : Relation<string>
         {
         };
 
-        auto query1 = Rule<Query1, AcademicAncestor, AcademicAncestor>{
-            {sym(x)},
-            {{{"Robin Milner"}, sym(x)},
-             {sym(x), {"Mistral Contrastin"}}}};
-#endif
+        struct Query : Rule<QueryResult, AcademicAncestor, AcademicAncestor>
+        {
+            Symbol<string> x, y;
 
-        typedef State<Adviser, AcademicAncestor> StateType;
-        //StateType state1{{advisers, {}}};
-        StateType state1{{{advisers}, {{}}}};
+            Query() : Define{
+                          QueryResult::Atom{sym(x)},
+                          {AcademicAncestor::Atom{{"Robin Milner"}, sym(x)},
+                           AcademicAncestor::Atom{sym(x), {"Mistral Contrastin"}}}} {};
+        };
 
 #if 0
+        typedef State<Adviser, AcademicAncestor> StateType;
+        //StateType state1{{advisers, {}}};
+        // TODO: remove additional brackets
+        StateType state1{{{advisers}, {{}}}};
+
         auto it1 = state1.iterator();
         while (it1.hasNext())
         {
@@ -174,17 +176,36 @@ int main()
         newState2.print(cout);
         cout << endl;
 #endif
+        typedef State<Adviser, AcademicAncestor, QueryResult> StateType;
+        // TODO: remove additional brackets
+        StateType state{{
+            {advisers}, 
+            {{}}, 
+            {{}} 
+        }};
+
         // Apply multiple rules
-        RuleSet<DirectAdviserIsAnAcademicAncestor, IndirectAdviserIsAnAcademicAncestor> rules{};
+        {
+            RuleSet<DirectAdviserIsAnAcademicAncestor, IndirectAdviserIsAnAcademicAncestor> rules{};
 
-        cout << "before = ";
-        state1.print(cout);
-        cout << endl;
-        auto newState2 = fixPoint(rules, state1);
-        cout << "after = ";
-        newState2.print(cout);
-        cout << endl;
+            cout << "before = ";
+            state.print(cout);
+            cout << endl;
+            state = fixPoint(rules, state);
+            cout << "after = ";
+            state.print(cout);
+            cout << endl;
+        }
 
-
+        // Apply a query
+#if 1
+        {
+            RuleSet<Query> rules{};
+            state = fixPoint(rules, state);
+            cout << "after = ";
+            state.print(cout);
+            cout << endl;
+        }
+#endif
     }
 }

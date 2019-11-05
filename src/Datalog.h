@@ -102,23 +102,7 @@ struct Relation : tuple<Ts...>
 	typedef set<Relation, compare> Set;
 };
 
-#if 0
-template <std::size_t I, typename ...Ts>
-decltype(auto) get(Relation<Ts...>&& v)
-{
-    return std::get<I>(static_cast<std::tuple<Ts...>&&>(v));
-}
-template <std::size_t I, typename ...Ts>
-decltype(auto) get(Relation<Ts...>& v)
-{
-    return std::get<I>(static_cast<std::tuple<Ts...>&>(v));
-}
-template <std::size_t I, typename ...Ts>
-decltype(auto) get(Relation<Ts...> const& v)
-{
-    return std::get<I>(static_cast<std::tuple<Ts...> const&>(v));
-}
-#endif
+// TODO: why can't we use the apply pattern everywhere?
 
 template <typename TUPLE_TYPE>
 static ostream &
@@ -130,12 +114,20 @@ print(ostream &out, const TUPLE_TYPE &s)
 	return out;
 }
 
+// TODO: can we avoid unbinding non-symbols by compile-time decisions?
+template <typename T>
+static void unbind(const SymbolOrValue<T> &symbolOrValue)
+{
+	if (symbolOrValue.isSym()) {
+ 		symbolOrValue.getSym()->unbind();
+	}
+}
+
 template <typename RELATION_TYPE, size_t... Is>
 static void unbind(const typename RELATION_TYPE::Atom &tuple,
 				   index_sequence<Is...>)
 {
-	// TODO: why can't we use the apply pattern everywhere?
-	((get<Is>(tuple).getSym()->unbind()), ...);
+	((unbind(get<Is>(tuple))), ...);
 }
 
 template <typename... Ts>
@@ -496,7 +488,6 @@ static Set<typename RULE_TYPE::HeadRelationType> applyRule(RULE_TYPE &rule, cons
 	while (it.hasNext())
 	{
 		auto slice = it.next();
-		//if (bind<RULE_TYPE, RELATIONs...>(rule.body, slice))
 		if (bind<RULE_TYPE>(rule.body, slice))
 		{
 			// successful bind, therefore add (grounded) head atom to new state

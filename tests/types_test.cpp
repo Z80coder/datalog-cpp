@@ -49,33 +49,72 @@ int main()
         {
         };
 
-        Symbol<string> x;
-        Symbol<string> y;
-        Symbol<string> z;
+#if 0
+        {
+            Symbol<string> x;
+            Symbol<string> y;
+            Symbol<string> z;
 
-        // Rule1
-        Adviser::Atom clause1{sym(x), sym(y)};
-        auto rule1 = Rule<AcademicAncestor, Adviser>{
-            {sym(x), sym(y)},
-            {{sym(x), sym(y)}}};
+            // Bind 1 atom with 1 fact
+            Adviser fact1{{"Andrew Rice", "Mistral Contrastin"}};
+            Adviser::Atom clause1{sym(x), sym(y)};
+            if (bind(clause1, fact1))
+            {
+                cout << "successful bind" << endl;
+            }
+            else
+            {
+                cout << "failed bind" << endl;
+            }
+
+            // Bind 1 atom with 1 fact
+            Adviser::Atom dummyClause{sym(x), sym(x)};
+            if (bind(dummyClause, fact1))
+            {
+                cout << "successful bind" << endl;
+            }
+            else
+            {
+                cout << "failed bind" << endl;
+            }
+
+            // Bind 1 atom with 1 fact
+            Adviser fact2{{"Mistral Contrastin", "Mistral Contrastin"}};
+            if (bind(dummyClause, fact2))
+            {
+                cout << "successful bind" << endl;
+            }
+            else
+            {
+                cout << "failed bind" << endl;
+            }
+        }
+#endif
 
         // Rule1 alternative
-        struct AdviserIsAnAcademicAncestor : Rule<AcademicAncestor, Adviser>
+        struct DirectAdviserIsAnAcademicAncestor : Rule<AcademicAncestor, Adviser>
         {
-            Symbol<string> x, y, z;
+            Symbol<string> x, y;
 
-            AdviserIsAnAcademicAncestor() : Define{
+            DirectAdviserIsAnAcademicAncestor() : Define{
                                                 AcademicAncestor::Atom{sym(x), sym(y)},
                                                 {Adviser::Atom{sym(x), sym(y)}}} {};
         };
 
-        // Rule2
-        typedef Rule<AcademicAncestor, Adviser, AcademicAncestor> Rule2Type;
-        auto rule2 = Rule2Type{
-            AcademicAncestor::Atom{sym(x), sym(z)},
-            {Adviser::Atom{sym(x), sym(y)},
-             AcademicAncestor::Atom{sym(y), sym(z)}}};
+        // Rule2 alternative
+        struct IndirectAdviserIsAnAcademicAncestor : Rule<AcademicAncestor, Adviser, AcademicAncestor>
+        {
+            Symbol<string> x, y, z;
 
+            IndirectAdviserIsAnAcademicAncestor() : Define{
+                                                AcademicAncestor::Atom{sym(x), sym(z)},
+                                                {
+                                                    Adviser::Atom{sym(x), sym(y)},
+                                                    AcademicAncestor::Atom{sym(y), sym(z)}
+                                                }} {};
+        };
+
+#if 0
         // Query1
         struct Query1 : Relation<string>
         {
@@ -85,50 +124,13 @@ int main()
             {sym(x)},
             {{{"Robin Milner"}, sym(x)},
              {sym(x), {"Mistral Contrastin"}}}};
-
-        // Bind 1 atom with 1 fact
-        Adviser fact1{{"Andrew Rice", "Mistral Contrastin"}};
-        if (bind(clause1, fact1))
-        {
-            cout << "successful bind" << endl;
-        }
-        else
-        {
-            cout << "failed bind" << endl;
-        }
-
-        // Bind 1 atom with 1 fact
-        Adviser::Atom dummyClause{sym(x), sym(x)};
-        if (bind(dummyClause, fact1))
-        {
-            cout << "successful bind" << endl;
-        }
-        else
-        {
-            cout << "failed bind" << endl;
-        }
-
-        // Bind 1 atom with 1 fact
-        Adviser fact2{{"Mistral Contrastin", "Mistral Contrastin"}};
-        if (bind(dummyClause, fact2))
-        {
-            cout << "successful bind" << endl;
-        }
-        else
-        {
-            cout << "failed bind" << endl;
-        }
-#if 0
-        // Bind 1 atom with a relation (n facts)
-        cout << "Should bind with all relations:" << endl;
-        auto newRelation1 = bind(clause1, advisers);
-        cout << "Should bind with 0 relations:" << endl;
-        auto newRelation2 = bind(dummyClause, advisers);
 #endif
 
         typedef State<Adviser, AcademicAncestor> StateType;
         //StateType state1{{advisers, {}}};
         StateType state1{{{advisers}, {{}}}};
+
+#if 0
         auto it1 = state1.iterator();
         while (it1.hasNext())
         {
@@ -143,19 +145,46 @@ int main()
         {
             it2.next();
         }
+#endif
 
-        // TODO: try to remove need for specifying rule type
-        auto derivedFacts1 = apply<Rule2Type>(rule2, state1);
+#if 0
+        auto rule1 = IndirectAdviserIsAnAcademicAncestor{};
+        auto derivedFacts1 = applyRule(rule1, state1);
 
         cout << "before = ";
         state1.print(cout);
         cout << endl;
-        auto derivedFacts2 = apply<decltype(rule1)>(rule1, state1);
+        auto rule2 = DirectAdviserIsAnAcademicAncestor{};
+        auto derivedFacts2 = applyRule(rule2, state1);
         //cout << "new derived facts = ";
         //derivedFacts2.print(cout);
-        auto newState = add(state1, derivedFacts2);
+        auto newState1 = add(derivedFacts2, state1);
         cout << "after = ";
-        newState.print(cout);
+        newState1.print(cout);
         cout << endl;
+
+        // Apply multiple rules
+        cout << "before = ";
+        state1.print(cout);
+        cout << endl;
+        RuleSet<DirectAdviserIsAnAcademicAncestor, IndirectAdviserIsAnAcademicAncestor> rules{};
+        auto newState2 = applyRuleSet(rules, state1);
+        //newState2 = applyRuleSet(rules, newState2);
+        cout << "after = ";
+        newState2.print(cout);
+        cout << endl;
+#endif
+        // Apply multiple rules
+        RuleSet<DirectAdviserIsAnAcademicAncestor, IndirectAdviserIsAnAcademicAncestor> rules{};
+
+        cout << "before = ";
+        state1.print(cout);
+        cout << endl;
+        auto newState2 = fixPoint(rules, state1);
+        cout << "after = ";
+        newState2.print(cout);
+        cout << endl;
+
+
     }
 }

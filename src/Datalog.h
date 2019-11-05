@@ -196,16 +196,6 @@ static bool bind(ATOM_TYPE &atom, const GROUND_TYPE &fact, index_sequence<Is...>
 	return success;
 }
 
-// bind 1 atom with 1 fact (of the same relation type)
-#if 0
-template <typename ATOM_TYPE, typename GROUND_TYPE>
-static bool bind(ATOM_TYPE &atom, const GROUND_TYPE &fact)
-{
-	//unbind<RELATION_TYPE>(atom);
-	constexpr size_t tupleSize = tuple_size<typename GROUND_TYPE::TupleType>::value;
-	return bind<ATOM_TYPE, typename GROUND_TYPE::TupleType>(atom, fact, make_index_sequence<tupleSize>{});
-}
-#else
 template <typename RELATION_TYPE>
 static bool bind(typename RELATION_TYPE::Atom &atom, const RELATION_TYPE &fact)
 {
@@ -213,25 +203,6 @@ static bool bind(typename RELATION_TYPE::Atom &atom, const RELATION_TYPE &fact)
 	constexpr size_t tupleSize = tuple_size<typename RELATION_TYPE::TupleType>::value;
 	return bind<typename RELATION_TYPE::Atom, typename RELATION_TYPE::TupleType>(atom, fact, make_index_sequence<tupleSize>{});
 }
-#endif
-
-#if 0
-// bind 1 atom with a relation (n facts)
-template<typename RELATION_TYPE>
-static RELATION_TYPE bind(
-        typename RELATION_TYPE::AtomicType& atom,
-        const RELATION_TYPE& relation
-) {
-    set<typename RELATION_TYPE::GroundType> outputTuples;
-    for (auto& fact : relation.tuples) {
-        const auto& boundAtom = bind<RELATION_TYPE>(atom, fact);
-        if (boundAtom.has_value()) {
-            outputTuples.insert(boundAtom.value());
-        }
-    }
-    return RELATION_TYPE{outputTuples};
-}
-#endif
 
 template <typename HEAD_RELATION, typename... BODY_RELATIONs>
 struct Rule
@@ -243,6 +214,11 @@ struct Rule
 	typedef tuple<BODY_RELATIONs...> BodyRelations;
 	typedef tuple<typename BODY_RELATIONs::Atom...> BodyType;
 	BodyType body;
+
+	// TODO:
+	// You must sub-class to define rules
+	private:
+//	virtual void forceSublassing() = 0;
 };
 
 // TODO: push this through to avoid reinterpret_casts
@@ -269,6 +245,13 @@ struct State
 	SetsOfRelationsType relations;
 	typedef tuple<const RELATIONs *...> SliceType;
 	typedef tuple<typename RELATIONs::Set::const_iterator...> IteratorsArrayType;
+
+	size_t size() const {
+		size_t totalSize = 0;
+		auto inc = [](size_t& size, size_t inc) { size += inc; };
+		apply([&totalSize, &inc](auto &&... args) { ((inc(totalSize, args.set.size())), ...); }, relations);
+		return totalSize;
+	}
 
 	ostream & print(ostream &out)
 	{
@@ -436,19 +419,6 @@ static void unbind(const typename RULE_TYPE::BodyType &atoms)
 					  make_index_sequence<tuple_size<typename RULE_TYPE::BodyType>::value>{});
 }
 
-#if 0
-// bind 1 atom with 1 fact (of the same relation type)
-template <typename RELATION_TYPE>
-static bool bind(typename RELATION_TYPE::Atom &atom,
-				 const RELATION_TYPE &fact)
-{
-	//unbind<RELATION_TYPE>(atom);
-	//constexpr size_t tupleSize = tuple_size<typename RELATION_TYPE::Type>::value;
-	constexpr size_t tupleSize = tuple_size<typename RELATION_TYPE::TupleType>::value;
-	return bind<RELATION_TYPE>(atom, fact, make_index_sequence<tupleSize>{});
-}
-#endif
-
 template <size_t I, typename RULE_TYPE, typename... RELATIONs>
 static bool bind(typename RULE_TYPE::BodyType &atoms, // typedef tuple<typename BODY_RELATIONs::Atom...> BodyType;
 				 const tuple<RELATIONs const *...> &slice)
@@ -516,9 +486,9 @@ static RELATION_TYPE ground(const typename RELATION_TYPE::Atom &atom)
 	return groundAtom;
 }
 
-// apply a rule to state
-template <typename RULE_TYPE, typename... RELATIONs>
-static Set<typename RULE_TYPE::HeadRelationType> apply(RULE_TYPE &rule, const State<RELATIONs...> &state)
+
+template <typename RULE_TYPE, typename STATE_TYPE>
+static Set<typename RULE_TYPE::HeadRelationType> applyRule(RULE_TYPE &rule, const STATE_TYPE &state)
 {
 	typedef typename RULE_TYPE::HeadRelationType HeadRelationType;
 	Set<HeadRelationType> derivedFacts;
@@ -526,12 +496,13 @@ static Set<typename RULE_TYPE::HeadRelationType> apply(RULE_TYPE &rule, const St
 	while (it.hasNext())
 	{
 		auto slice = it.next();
-		if (bind<RULE_TYPE, RELATIONs...>(rule.body, slice))
+		//if (bind<RULE_TYPE, RELATIONs...>(rule.body, slice))
+		if (bind<RULE_TYPE>(rule.body, slice))
 		{
 			// successful bind, therefore add (grounded) head atom to new state
 			//cout << "successful bind of body" << endl;
 			auto derivedFact = ground<HeadRelationType>(rule.head);
-			#if 0
+			#if 1
 			{
 				cout << "adding: ";
 				datalog::print<typename HeadRelationType::TupleType>(cout, derivedFact); // TODO: avoid need for type
@@ -557,12 +528,44 @@ static Set<RELATION_TYPE> merge(const Set<RELATION_TYPE>&s1, const Set<RELATION_
 }
 
 template <typename RELATION_TYPE, typename ... RELATIONs>
-static State<RELATIONs...> add(const State<RELATIONs...> &state, const Set<RELATION_TYPE>& facts) {
+static State<RELATIONs...> add(const Set<RELATION_TYPE>& facts, const State<RELATIONs...> &state) {
 	typedef State<RELATIONs...> StateType;
 	StateType newState{state};
 	typedef Set<RELATION_TYPE> SetType;
 	auto& relation = get<SetType>(newState.relations);
 	relation = merge(relation, facts);
+	return newState;
+}
+
+template <typename RELATION_TYPE, typename ... RELATIONs>
+static void add(const Set<RELATION_TYPE>& facts, const State<RELATIONs...> &inState, State<RELATIONs...> &outState) {
+	outState = add(facts, inState);
+}
+
+template <typename ... RULE_TYPEs>
+struct RuleSet {
+	tuple<RULE_TYPEs...> rules;
+};
+
+template <typename ... RULE_TYPEs, typename... RELATIONs>
+static State<RELATIONs...> applyRuleSet(RuleSet<RULE_TYPEs...> &ruleSet, const State<RELATIONs...> &state) {
+	typedef State<RELATIONs...> StateType;
+	StateType newState{state};
+	apply([&state, &newState](auto &&... args) { ((add(applyRule(args, state), newState, newState)), ...); }, ruleSet.rules);
+	return newState;
+}
+
+template <typename ... RULE_TYPEs, typename... RELATIONs>
+static State<RELATIONs...> fixPoint(RuleSet<RULE_TYPEs...> &ruleSet, const State<RELATIONs...> &state) {
+	typedef State<RELATIONs...> StateType;
+	StateType newState{state};
+	size_t inStateSize = 0;
+	size_t outStateSize = 0;
+	do {
+		inStateSize = newState.size();
+		newState = applyRuleSet(ruleSet, newState);
+		outStateSize = newState.size();
+	} while (inStateSize != outStateSize);
 	return newState;
 }
 

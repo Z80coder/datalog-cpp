@@ -94,17 +94,8 @@ struct Relation : tuple<Ts...>
 	typedef tuple<Ts...> TupleType;
 	typedef tuple<VariableOrValue<Ts>...> Atom;
 	using tuple<Ts...>::tuple;
-	struct compare
-	{
-		bool operator()(const Relation &lhs, const Relation &rhs) const
-		{
-			return lhs < rhs;
-		}
-	};
-	typedef set<Relation, compare> Set;
+	typedef set<Relation> Set;
 };
-
-// TODO: why can't we use the apply pattern everywhere?
 
 template <typename TUPLE_TYPE>
 static ostream &
@@ -125,19 +116,10 @@ static void unbind(const VariableOrValue<T> &VariableOrValue)
 	}
 }
 
-template <typename RELATION_TYPE, size_t... Is>
-static void unbind(const typename RELATION_TYPE::Atom &tuple,
-				   index_sequence<Is...>)
-{
-	((unbind(get<Is>(tuple))), ...);
-}
-
 template <typename... Ts>
 static void unbind(const tuple<VariableOrValue<Ts>...> &tuple)
 {
-	auto indexSequence = make_index_sequence<
-		tuple_size<typename Relation<Ts...>::Atom>::value>{};
-	unbind<Relation<Ts...>>(tuple, indexSequence);
+	apply([](auto &&... args) { ((unbind(args), ...)); }, tuple);
 }
 
 // bind 1 VariableOrValue with 1 Value
@@ -206,6 +188,7 @@ struct Rule
 	typedef HEAD_RELATION HeadRelationType;
 	typedef typename HEAD_RELATION::Atom HeadType;
 	HeadType head;
+
 	typedef tuple<typename BODY_RELATIONs::Atom...> BodyType;
 	BodyType body;
 	typedef tuple<BODY_RELATIONs...> BodyRelations;
@@ -394,8 +377,7 @@ struct State
 		static RelationsIteratorType initIterators(const SetsOfRelationsType &relations)
 		{
 			RelationsIteratorType iterators;
-			initIterators(relations, iterators,
-						  make_index_sequence<tuple_size<RelationsIteratorType>::value>{});
+			initIterators(relations, iterators, make_index_sequence<tuple_size<RelationsIteratorType>::value>{});
 			return iterators;
 		}
 	};
@@ -408,18 +390,10 @@ struct State
 	}
 };
 
-template <typename RULE_TYPE, size_t... Is>
-static void unbind(const typename RULE_TYPE::BodyType &atoms,
-				   index_sequence<Is...>)
-{
-	((unbind(get<Is>(atoms))), ...);
-}
-
 template <typename RULE_TYPE>
 static void unbind(const typename RULE_TYPE::BodyType &atoms)
 {
-	unbind<RULE_TYPE>(atoms,
-					  make_index_sequence<tuple_size<typename RULE_TYPE::BodyType>::value>{});
+	apply([](auto &&... args) { ((unbind(args)), ...); }, atoms);
 }
 
 template <size_t I, typename RULE_TYPE>

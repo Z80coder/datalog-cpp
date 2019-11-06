@@ -2,6 +2,63 @@
 
 using namespace datalog;
 
+#if 1
+int main()
+{
+    enum Kind {
+        person = 0,
+        god
+    };
+
+    struct Thing : Relation<string, Kind> {};
+
+    Thing::Set things{
+        {"Socrates", person}, 
+        {"Rhiannon", person}, 
+        {"Albert", person},
+        {"Anna", person},
+        {"Henry", person}, 
+        {"Ian", person}, 
+        {"Zeus", god},
+        {"Persephone", god},
+        {"Thor", god}
+    };
+
+    struct Mortal : Relation<string> {};
+
+    struct AllPeopleAreMortal : Rule<Mortal, Thing>
+    {
+        Variable<string> x;
+
+        AllPeopleAreMortal() : Define{
+            Mortal::Atom{var(x)},
+            {
+                Thing::Atom{var(x), {person}}
+            }
+        } {};
+    };
+
+    typedef State<Thing, Mortal> StateType;
+    StateType state{{
+        {things}, 
+        {{}} 
+    }};
+
+    cout << "before = ";
+    state.print(cout);
+    cout << endl;
+
+    RuleSet<AllPeopleAreMortal> rules{};
+    state = fixPoint(rules, state);
+
+    cout << "after = ";
+    state.print(cout);
+    cout << endl;
+
+}
+#endif
+
+#if 0
 int main()
 {
 
@@ -124,7 +181,7 @@ int main()
             Query() : Define{
                           QueryResult::Atom{sym(x)},
                           {AcademicAncestor::Atom{{"Robin Milner"}, sym(x)},
-                           AcademicAncestor::Atom{sym(x), {"Mistral Contrastin"}}}} {};
+                           AcademicAncestor::Atom{sym(x), {"Dominic Orchard"}}}} {};
         };
 
 #if 0
@@ -198,7 +255,7 @@ int main()
         }
 
         // Apply a query
-#if 1
+#if 0
         {
             RuleSet<Query> rules{};
             state = fixPoint(rules, state);
@@ -209,3 +266,4 @@ int main()
 #endif
     }
 }
+#endif

@@ -18,7 +18,7 @@ namespace datalog
 using namespace std;
 
 template <typename T>
-struct Symbol : optional<T>
+struct Variable : optional<T>
 {
 	void bind(const T &value)
 	{
@@ -43,19 +43,19 @@ struct Symbol : optional<T>
 };
 
 template <typename T>
-struct SymbolOrValue : public variant<T, Symbol<T> *>
+struct VariableOrValue : public variant<T, Variable<T> *>
 {
-	typedef Symbol<T> *SymbolType;
+	typedef Variable<T> *VariableType;
 
-	bool isSym() const
+	bool isVar() const
 	{
-		return holds_alternative<SymbolType>(*this);
+		return holds_alternative<VariableType>(*this);
 	}
 
-	const SymbolType
-	getSym() const
+	const VariableType
+	getVar() const
 	{
-		return get<SymbolType>(*this);
+		return get<VariableType>(*this);
 	}
 
 	const T &
@@ -66,18 +66,18 @@ struct SymbolOrValue : public variant<T, Symbol<T> *>
 };
 
 template <typename T>
-static SymbolOrValue<T> sym(Symbol<T> &symbol)
+static VariableOrValue<T> var(Variable<T> &Variable)
 {
-	return SymbolOrValue<T>{&symbol};
+	return VariableOrValue<T>{&Variable};
 }
 
 template <typename T>
 static ostream &
-operator<<(ostream &out, const SymbolOrValue<T> &s)
+operator<<(ostream &out, const VariableOrValue<T> &s)
 {
-	if (s.isSym())
+	if (s.isVar())
 	{
-		out << s.getSym();
+		out << s.getVar();
 	}
 	else
 	{
@@ -90,7 +90,7 @@ template <typename... Ts>
 struct Relation : tuple<Ts...>
 {
 	typedef tuple<Ts...> TupleType;
-	typedef tuple<SymbolOrValue<Ts>...> Atom;
+	typedef tuple<VariableOrValue<Ts>...> Atom;
 	using tuple<Ts...>::tuple;
 	struct compare
 	{
@@ -114,12 +114,12 @@ print(ostream &out, const TUPLE_TYPE &s)
 	return out;
 }
 
-// TODO: can we avoid unbinding non-symbols by compile-time decisions?
+// TODO: can we avoid unbinding non-Variables by compile-time decisions?
 template <typename T>
-static void unbind(const SymbolOrValue<T> &symbolOrValue)
+static void unbind(const VariableOrValue<T> &VariableOrValue)
 {
-	if (symbolOrValue.isSym()) {
- 		symbolOrValue.getSym()->unbind();
+	if (VariableOrValue.isVar()) {
+ 		VariableOrValue.getVar()->unbind();
 	}
 }
 
@@ -131,32 +131,34 @@ static void unbind(const typename RELATION_TYPE::Atom &tuple,
 }
 
 template <typename... Ts>
-static void unbind(const tuple<SymbolOrValue<Ts>...> &tuple)
+static void unbind(const tuple<VariableOrValue<Ts>...> &tuple)
 {
 	auto indexSequence = make_index_sequence<
 		tuple_size<typename Relation<Ts...>::Atom>::value>{};
 	unbind<Relation<Ts...>>(tuple, indexSequence);
 }
 
-// bind 1 SymbolOrValue with 1 Value
+// bind 1 VariableOrValue with 1 Value
 template <typename VALUE_TYPE>
-bool bind(SymbolOrValue<VALUE_TYPE> &s, const VALUE_TYPE &v)
+bool bind(VariableOrValue<VALUE_TYPE> &s, const VALUE_TYPE &v)
 {
-	if (s.isSym())
+	bool success = false;
+	if (s.isVar())
 	{
-		Symbol<VALUE_TYPE> &symbol = *s.getSym();
-		// has the symbol already been bound?
-		if (symbol.isBound())
+		Variable<VALUE_TYPE> &Variable = *s.getVar();
+		// has the Variable already been bound?
+		if (Variable.isBound())
 		{
 			// is it a consistent binding?
-			if (!(symbol.value() == v))
-			{
-				return false;
-			}
+			success = Variable.value() == v;
+		} else {
+			Variable.bind(v);
+			success = true;
 		}
-		symbol.bind(v);
+	} else {
+		success = s.getVal() == v;
 	}
-	return true;
+	return success;
 }
 
 template <typename ATOM_TYPE, typename GROUND_TYPE, size_t... Is>
@@ -442,7 +444,7 @@ template <typename RULE_TYPE, typename... RELATIONs>
 static bool bind(typename RULE_TYPE::BodyType &atoms,
 				 const tuple<RELATIONs const *...> &slice)
 {
-	// unbind all the symbols
+	// unbind all the Variables
 	unbind<RULE_TYPE>(atoms);
 	// for each atom, bind with corresponding relation type in slice
 	return bind<RULE_TYPE, RELATIONs...>(atoms, slice,
@@ -450,13 +452,13 @@ static bool bind(typename RULE_TYPE::BodyType &atoms,
 }
 
 template <typename VALUE_TYPE>
-void ground(const SymbolOrValue<VALUE_TYPE> &s, VALUE_TYPE &v)
+void ground(const VariableOrValue<VALUE_TYPE> &s, VALUE_TYPE &v)
 {
-	if (s.isSym())
+	if (s.isVar())
 	{
-		Symbol<VALUE_TYPE> &symbol = *s.getSym();
-		assert(symbol.isBound());
-		v = symbol.value();
+		Variable<VALUE_TYPE> &Variable = *s.getVar();
+		assert(Variable.isBound());
+		v = Variable.value();
 	}
 	else
 	{

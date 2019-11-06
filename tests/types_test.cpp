@@ -2,8 +2,7 @@
 
 using namespace datalog;
 
-#if 1
-int main()
+bool test1()
 {
     enum Kind {
         person = 0,
@@ -55,11 +54,10 @@ int main()
     state.print(cout);
     cout << endl;
 
+    return true;
 }
-#endif
 
-#if 0
-int main()
+bool test2()
 {
 
     struct Int : Relation<int>
@@ -88,19 +86,27 @@ int main()
 #endif
     }
     {
-        Symbol<int> a;
-        Symbol<int> b;
-        Int_Int::Atom r1{{1}, sym(a)};
-        String_Int::Atom r2{{"world"}, sym(b)};
-        Symbol<string> c;
-        String_Int_String::Atom r3{{"hello"}, {1}, sym(c)};
+        Variable<int> a;
+        Variable<int> b;
+        Int_Int::Atom r1{{1}, var(a)};
+        String_Int::Atom r2{{"world"}, var(b)};
+        Variable<string> c;
+        String_Int_String::Atom r3{{"hello"}, {1}, var(c)};
     }
 
     {
         struct Adviser : Relation<string, string>
         {
         };
-        Adviser::Set advisers{{"Andrew Rice", "Mistral Contrastin"}, {"Andy Hopper", "Andrew Rice"}, {"Alan Mycroft", "Dominic Orchard"}, {"David Wheeler", "Andy Hopper"}, {"Rod Burstall", "Alan Mycroft"}, {"Robin Milner", "Alan Mycroft"}};
+        Adviser::Set advisers{
+            {"Andrew Rice", "Mistral Contrastin"}, 
+            {"Dominic Orchard", "Mistral Contrastin"}, 
+            {"Andy Hopper", "Andrew Rice"}, 
+            {"Alan Mycroft", "Dominic Orchard"}, 
+            {"David Wheeler", "Andy Hopper"}, 
+            {"Rod Burstall", "Alan Mycroft"}, 
+            {"Robin Milner", "Alan Mycroft"}
+        };
 
         struct AcademicAncestor : Relation<string, string>
         {
@@ -108,13 +114,13 @@ int main()
 
 #if 0
         {
-            Symbol<string> x;
-            Symbol<string> y;
-            Symbol<string> z;
+            Variable<string> x;
+            Variable<string> y;
+            Variable<string> z;
 
             // Bind 1 atom with 1 fact
             Adviser fact1{{"Andrew Rice", "Mistral Contrastin"}};
-            Adviser::Atom clause1{sym(x), sym(y)};
+            Adviser::Atom clause1{var(x), var(y)};
             if (bind(clause1, fact1))
             {
                 cout << "successful bind" << endl;
@@ -125,7 +131,7 @@ int main()
             }
 
             // Bind 1 atom with 1 fact
-            Adviser::Atom dummyClause{sym(x), sym(x)};
+            Adviser::Atom dummyClause{var(x), var(x)};
             if (bind(dummyClause, fact1))
             {
                 cout << "successful bind" << endl;
@@ -151,22 +157,22 @@ int main()
         // Rule1
         struct DirectAdviserIsAnAcademicAncestor : Rule<AcademicAncestor, Adviser>
         {
-            Symbol<string> x, y;
+            Variable<string> x, y;
 
             DirectAdviserIsAnAcademicAncestor() : Define{
-                                                      AcademicAncestor::Atom{sym(x), sym(y)},
-                                                      {Adviser::Atom{sym(x), sym(y)}}} {};
+                                                      AcademicAncestor::Atom{var(x), var(y)},
+                                                      {Adviser::Atom{var(x), var(y)}}} {};
         };
 
         // Rule2
         struct IndirectAdviserIsAnAcademicAncestor : Rule<AcademicAncestor, Adviser, AcademicAncestor>
         {
-            Symbol<string> x, y, z;
+            Variable<string> x, y, z;
 
             IndirectAdviserIsAnAcademicAncestor() : Define{
-                                                        AcademicAncestor::Atom{sym(x), sym(z)},
-                                                        {Adviser::Atom{sym(x), sym(y)},
-                                                         AcademicAncestor::Atom{sym(y), sym(z)}}} {};
+                                                        AcademicAncestor::Atom{var(x), var(z)},
+                                                        {Adviser::Atom{var(x), var(y)},
+                                                         AcademicAncestor::Atom{var(y), var(z)}}} {};
         };
 
         // Query
@@ -176,12 +182,12 @@ int main()
 
         struct Query : Rule<QueryResult, AcademicAncestor, AcademicAncestor>
         {
-            Symbol<string> x, y;
+            Variable<string> x, y;
 
             Query() : Define{
-                          QueryResult::Atom{sym(x)},
-                          {AcademicAncestor::Atom{{"Robin Milner"}, sym(x)},
-                           AcademicAncestor::Atom{sym(x), {"Dominic Orchard"}}}} {};
+                          QueryResult::Atom{var(x)},
+                          {AcademicAncestor::Atom{{"Robin Milner"}, var(x)},
+                           AcademicAncestor::Atom{var(x), {"Mistral Contrastin"}}}} {};
         };
 
 #if 0
@@ -255,7 +261,7 @@ int main()
         }
 
         // Apply a query
-#if 0
+#if 1
         {
             RuleSet<Query> rules{};
             state = fixPoint(rules, state);
@@ -265,5 +271,11 @@ int main()
         }
 #endif
     }
+
+    return true;
 }
-#endif
+
+int main() {
+    test1();
+    test2();
+}

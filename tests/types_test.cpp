@@ -128,8 +128,36 @@ bool test2()
     return true;
 }
 
+bool po1()
+{
+    typedef unsigned int Number;
+    struct Check : Relation<Number, Number, Number, Number, Number, Number>{};
+    struct In : Relation<Number, Number, Number, Number, Number, Number, Number>{};
+    struct A : Relation<Number, Number>{};
+
+    Variable<Number> a, b, c, d, e, f, i;
+    Variable<Number> anon;
+
+#if 0
+    struct Rule1 : Rule<A, Check, In> {} rule1{
+        atom<A>(1, i),
+        //atom<A>(Number{1}, i),
+        //atom<A>(uint{1}, i),
+        //atom<A>(forward<Number>(1), i),
+        //atom<A>(move(1), i),
+        {
+            atom<Check>(anon, b, c, d, e, f),
+            atom<In>(anon, b, c, d, e, f, i)
+        }
+    };
+#endif
+
+    return true;
+}
+
 int main()
 {
     test1();
     test2();
+    po1();
 }

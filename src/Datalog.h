@@ -77,10 +77,17 @@ VariableOrValue<T> atomElement(const T& t) {
     return VariableOrValue<T>{t};
 };
 
+#if 1
 template<typename RELATION_TYPE, typename ... Ts>
 typename RELATION_TYPE::Atom atom(Ts&& ... elements) {
 	return typename RELATION_TYPE::Atom(forward_as_tuple(atomElement(elements)...));
 }
+#else
+template<typename RELATION_TYPE, typename ... Ts>
+typename RELATION_TYPE::Atom atom(Ts ... elements) {
+	return typename RELATION_TYPE::Atom(forward_as_tuple(atomElement(&elements)...));
+}
+#endif
 
 template <typename... Ts>
 struct Relation : tuple<Ts...>
@@ -91,7 +98,6 @@ struct Relation : tuple<Ts...>
 	typedef set<Relation> Set;
 };
 
-// TODO: can we avoid unbinding non-Variables by compile-time decisions?
 template <typename T>
 static void unbind(const VariableOrValue<T> &VariableOrValue)
 {

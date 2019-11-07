@@ -4,134 +4,125 @@ using namespace datalog;
 
 bool test1()
 {
-    enum Kind
-    {
-        person = 0,
-        god
+    // Relations
+    typedef const char* NameType;
+    enum Kind {person, god};
+    struct Thing : Relation<NameType, Kind>{};
+    struct Mortal : Relation<NameType>{};
+
+    // Rule
+    Variable<NameType> x;
+    struct PeopleAreMortal : Rule<Mortal, Thing> {} rule{
+        atom<Mortal>(x),
+        {
+            atom<Thing>(x, person)
+        }
     };
 
-    struct Thing : Relation<string, Kind>
-    {
-    };
+    // Extensional data
+    NameType socrates{"Socrates"};
+    NameType rhiannon{"Rhiannon"};
+    NameType albert{"Albert"};
+    NameType anna{"Anna"};
+    NameType henry{"Henry"};
+    NameType ian{"Ian"};
+    NameType zeus{"Zeus"};
+    NameType persephone{"Persephone"};
+    NameType thor{"Thor"};
 
     Thing::Set things{
-        {"Socrates", person},
-        {"Rhiannon", person},
-        {"Albert", person},
-        {"Anna", person},
-        {"Henry", person},
-        {"Ian", person},
-        {"Zeus", god},
-        {"Persephone", god},
-        {"Thor", god}};
-
-    struct Mortal : Relation<string>
-    {
-    };
-
-    struct AllPeopleAreMortal : Rule<Mortal, Thing>
-    {
-        Variable<string> x;
-
-        AllPeopleAreMortal() : Define{
-                                   Mortal::Atom{var(x)},
-                                   {Thing::Atom{var(x), {person}}}} {};
-    };
+        {socrates, person},
+        {rhiannon, person},
+        {albert, person},
+        {anna, person},
+        {henry, person},
+        {ian, person},
+        {zeus, god},
+        {persephone, god},
+        {thor, god}};
 
     State<Thing, Mortal> state{things, {}};
 
-    cout << "before = ";
-    state.print(cout);
-    cout << endl;
+    // Apply rule
+    RuleSet<PeopleAreMortal> rules{rule};
 
-    RuleSet<AllPeopleAreMortal> rules{};
+    cout << "before = " << state << endl;
     state = fixPoint(rules, state);
-
-    cout << "after = ";
-    state.print(cout);
-    cout << endl;
+    cout << "after = " << state << endl;
 
     return true;
 }
 
 bool test2()
 {
-
-    struct Adviser : Relation<string, string>
-    {
-    };
-
-    Adviser::Set advisers{
-        {"Andrew Rice", "Mistral Contrastin"},
-        {"Dominic Orchard", "Mistral Contrastin"},
-        {"Andy Hopper", "Andrew Rice"},
-        {"Alan Mycroft", "Dominic Orchard"},
-        {"David Wheeler", "Andy Hopper"},
-        {"Rod Burstall", "Alan Mycroft"},
-        {"Robin Milner", "Alan Mycroft"}};
-
-    struct AcademicAncestor : Relation<string, string>
-    {
-    };
+    // Relations
+    typedef const char* NameType;
+    struct Adviser : Relation<NameType, NameType>{};
+    struct AcademicAncestor : Relation<NameType, NameType>{};
+    struct QueryResult : Relation<NameType>{};
 
     // Rule1
-    struct DirectAdviserIsAnAcademicAncestor : Rule<AcademicAncestor, Adviser>
-    {
-        Variable<string> x, y;
+    Variable<NameType> x, y, z;
 
-        DirectAdviserIsAnAcademicAncestor() : Define{
-                                                  AcademicAncestor::Atom{var(x), var(y)},
-                                                  {Adviser::Atom{var(x), var(y)}}} {};
+    struct DirectAcademicAncestor : Rule<AcademicAncestor, Adviser> {} rule1{
+        atom<AcademicAncestor>(x, y),
+        {
+            atom<Adviser>(x, y)
+        }
     };
 
     // Rule2
-    struct IndirectAdviserIsAnAcademicAncestor : Rule<AcademicAncestor, Adviser, AcademicAncestor>
-    {
-        Variable<string> x, y, z;
-
-        IndirectAdviserIsAnAcademicAncestor() : Define{
-                                                    AcademicAncestor::Atom{var(x), var(z)},
-                                                    {Adviser::Atom{var(x), var(y)},
-                                                     AcademicAncestor::Atom{var(y), var(z)}}} {};
+    struct IndirectAcademicAncestor : Rule<AcademicAncestor, Adviser, AcademicAncestor> {} rule2{
+        atom<AcademicAncestor>(x, z),
+        {
+            atom<Adviser>(x, y),
+            atom<Adviser>(y, z)
+        }
     };
 
-    // Query
-    struct QueryResult : Relation<string>
-    {
-    };
+    // Extensional data
+    NameType andrew{"Andrew Rice"};
+    NameType mistral{"Mistral Contrastin"};
+    NameType dominic{"Dominic Orchard"};
+    NameType andy{"Andy Hopper"};
+    NameType alan{"Alan Mycroft"};
+    NameType rod{"Rod Burstall"};
+    NameType robin{"Robin Milner"};
+    NameType david{"David Wheeler"};
 
-    struct Query : Rule<QueryResult, AcademicAncestor, AcademicAncestor>
-    {
-        Variable<string> x, y;
-
-        Query() : Define{
-                      QueryResult::Atom{var(x)},
-                      {AcademicAncestor::Atom{{"Robin Milner"}, var(x)},
-                       AcademicAncestor::Atom{var(x), {"Mistral Contrastin"}}}} {};
-    };
-
+    Adviser::Set advisers{
+        {andrew, mistral},
+        {dominic, mistral},
+        {andy, andrew},
+        {alan, dominic},
+        {david, andy},
+        {rod, alan},
+        {robin, alan}};
     State<Adviser, AcademicAncestor, QueryResult> state{advisers, {}, {}};
 
     // Apply multiple rules
     {
-        RuleSet<DirectAdviserIsAnAcademicAncestor, IndirectAdviserIsAnAcademicAncestor> rules{};
+        RuleSet<DirectAcademicAncestor, IndirectAcademicAncestor> rules{{rule1, rule2}};
 
-        cout << "before = ";
-        state.print(cout);
-        cout << endl;
+        cout << "before = " << state << endl;
         state = fixPoint(rules, state);
-        cout << "after = ";
-        state.print(cout);
-        cout << endl;
+        cout << "after = " << state << endl;
     }
+
+    // Query
+    struct Query : Rule<QueryResult, AcademicAncestor, AcademicAncestor> {} query{
+        atom<QueryResult>(x),
+        {
+            atom<AcademicAncestor>(robin, x),
+            atom<AcademicAncestor>(x, mistral)
+        }
+    };
 
     // Apply a query
     {
-        RuleSet<Query> rules{};
+        RuleSet<Query> rules{query};
         state = fixPoint(rules, state);
-        cout << "after = ";
-        state.print(cout);
-        cout << endl;
+        cout << "after = " << state << endl;
     }
 
     return true;

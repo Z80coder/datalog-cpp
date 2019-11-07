@@ -67,25 +67,19 @@ struct VariableOrValue : public variant<T, Variable<T> *>
 	}
 };
 
-template <typename T>
-static VariableOrValue<T> var(Variable<T> &Variable)
-{
-	return VariableOrValue<T>{&Variable};
-}
+template<typename T>
+VariableOrValue<T> atomElement(Variable<T>& t) { 
+    return VariableOrValue<T>{&t};
+};
 
-template <typename T>
-static ostream &
-operator<<(ostream &out, const VariableOrValue<T> &s)
-{
-	if (s.isVar())
-	{
-		out << s.getVar();
-	}
-	else
-	{
-		out << s.getVal();
-	}
-	return out;
+template<typename T>
+VariableOrValue<T> atomElement(const T& t) { 
+    return VariableOrValue<T>{t};
+};
+
+template<typename RELATION_TYPE, typename ... Ts>
+typename RELATION_TYPE::Atom atom(Ts&& ... elements) {
+	return typename RELATION_TYPE::Atom(forward_as_tuple(atomElement(elements)...));
 }
 
 template <typename... Ts>
@@ -96,16 +90,6 @@ struct Relation : tuple<Ts...>
 	using tuple<Ts...>::tuple;
 	typedef set<Relation> Set;
 };
-
-template <typename TUPLE_TYPE>
-static ostream &
-print(ostream &out, const TUPLE_TYPE &s)
-{
-	out << "[";
-	apply([&out](auto &&... args) { ((out << "[" << args << "]"), ...); }, s);
-	out << "] ";
-	return out;
-}
 
 // TODO: can we avoid unbinding non-Variables by compile-time decisions?
 template <typename T>
@@ -199,18 +183,26 @@ struct Rule
 template<typename RELATION_TYPE>
 struct RelationSet {
 	typename RELATION_TYPE::Set set;
-
-	ostream & print(ostream &out)
-	{
-		out << "\"" << typeid(*this).name() << "\"" << endl;
-		for (const auto& tuple : set) {
-			datalog::print<typename RELATION_TYPE::TupleType>(out, tuple);
-			out << endl;
-		}
-		return out;
-	}
-
 };
+
+template <typename RELATION_TYPE>
+static ostream& operator<<(ostream& out, const typename RELATION_TYPE::TupleType& t) {
+	out << "[";
+	apply([&out](auto &&... args) { ((out << "[" << args << "]"), ...); }, t);
+	out << "] ";
+	return out;
+}
+
+template<typename RELATION_TYPE>
+static ostream & operator<<(ostream &out, const RelationSet<RELATION_TYPE>& relationSet)
+{
+	out << "\"" << typeid(relationSet).name() << "\"" << endl;
+	for (const auto& tuple : relationSet.set) {
+		operator<< <RELATION_TYPE>(out, tuple);
+		out << endl;
+	}
+	return out;
+}
 
 template <typename... RELATIONs>
 struct State
@@ -227,26 +219,6 @@ struct State
 		return totalSize;
 	}
 
-	ostream & print(ostream &out)
-	{
-		out << "[";
-		apply([&out](auto &&... args) { ((args.print(out)), ...); }, relations);
-		out << "] ";
-		return out;
-	}
-
-	// Next 2 functions for printing slices. TODO: consolidate printing functions
-	template <typename TUPLE_TYPE>
-	static ostream &
-	print(ostream &out, TUPLE_TYPE const *p)
-	{
-		if (p)
-		{
-			datalog::print<typename TUPLE_TYPE::TupleType>(out, *p);
-		}
-		return out;
-	}
-
 	template<typename RULE_TYPE>
 	struct Iterator
 	{
@@ -255,13 +227,6 @@ struct State
 		
 		Iterator(const SetsOfRelationsType &relations) : relations(relations), iterators(initIterators(relations))
 		{
-		}
-
-		static ostream &
-		print(ostream &out, const SliceType &slice)
-		{
-			apply([&out](auto &&... args) { ((print(out, args), ...)); }, slice);
-			return out;
 		}
 
 	private:
@@ -385,6 +350,14 @@ struct State
 		return it;
 	}
 };
+
+template <typename... RELATIONs>
+ostream & operator<<(ostream &out, const State<RELATIONs...>& state) {
+	out << "[";
+	apply([&out](auto &&... args) { ((operator<<(out, args)), ...); }, state.relations);
+	out << "] ";
+	return out;
+}
 
 template <typename RULE_TYPE>
 static void unbind(const typename RULE_TYPE::BodyType &atoms)

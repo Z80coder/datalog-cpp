@@ -29,8 +29,6 @@ bool test1()
     {
     };
 
-    Mortal::Set mortals{};
-    
     struct AllPeopleAreMortal : Rule<Mortal, Thing>
     {
         Variable<string> x;
@@ -40,9 +38,7 @@ bool test1()
                                    {Thing::Atom{var(x), {person}}}} {};
     };
 
-    typedef State<Thing, Mortal> StateType;
-    StateType state{{{things},
-                     {{}}}};
+    State<Thing, Mortal> state{things, {}};
 
     cout << "before = ";
     state.print(cout);
@@ -114,11 +110,7 @@ bool test2()
                        AcademicAncestor::Atom{var(x), {"Mistral Contrastin"}}}} {};
     };
 
-    typedef State<Adviser, AcademicAncestor, QueryResult> StateType;
-    // TODO: remove additional brackets
-    StateType state{{{advisers},
-                     {{}},
-                     {{}}}};
+    State<Adviser, AcademicAncestor, QueryResult> state{advisers, {}, {}};
 
     // Apply multiple rules
     {

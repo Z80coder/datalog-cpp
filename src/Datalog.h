@@ -194,16 +194,10 @@ struct Rule
 	typedef tuple<BODY_RELATIONs...> BodyRelations;
 	typedef tuple<typename BODY_RELATIONs::Set::const_iterator...> BodyRelationsIteratorType;
 	typedef tuple<const BODY_RELATIONs *...> SliceType;
-
-	// TODO:
-	// You must sub-class to define rules
-	private:
-//	virtual void forceSublassing() = 0;
 };
 
-// TODO: push this through to avoid reinterpret_casts
 template<typename RELATION_TYPE>
-struct Set {
+struct RelationSet {
 	typename RELATION_TYPE::Set set;
 
 	ostream & print(ostream &out)
@@ -221,7 +215,9 @@ struct Set {
 template <typename... RELATIONs>
 struct State
 {
-	typedef tuple<Set<RELATIONs>...> SetsOfRelationsType;
+	explicit State(const typename RELATIONs::Set&... relations) : relations{{relations}...} {}
+
+	typedef tuple<RelationSet<RELATIONs>...> SetsOfRelationsType;
 	SetsOfRelationsType relations;
 
 	size_t size() const {
@@ -275,7 +271,7 @@ struct State
 			typedef typename tuple_element<I, typename RULE_TYPE::BodyRelations>::type RelationType;
 			const auto &it = get<I>(iterators);
 			auto& sliceElement = get<I>(slice);
-			const auto& relation = get<Set<RelationType>>(relations);
+			const auto& relation = get<RelationSet<RelationType>>(relations);
 			if (it != relation.set.end())
 			{
 				// TODO: avoid cast if possible
@@ -304,12 +300,12 @@ struct State
 			if (not stop)
 			{
 				auto &it = get<I>(iterators);
-				const auto &end = get<Set<RelationType>>(relations).set.end();
+				const auto &end = get<RelationSet<RelationType>>(relations).set.end();
 				if (it != end)
 					it++;
 				if (it == end)
 				{
-					it = get<Set<RelationType>>(relations).set.begin();
+					it = get<RelationSet<RelationType>>(relations).set.begin();
 					if (I == tuple_size<RelationsIteratorType>::value - 1)
 					{
 						iterationFinished = true;
@@ -363,7 +359,7 @@ struct State
 		{
 			typedef typename tuple_element<I, typename RULE_TYPE::BodyRelations>::type RelationType;
 			auto& it = get<I>(iterators);
-			const auto& relation = get<Set<RelationType>>(relations);
+			const auto& relation = get<RelationSet<RelationType>>(relations);
 			it = relation.set.begin();
 		}
 
@@ -460,10 +456,10 @@ static RELATION_TYPE ground(const typename RELATION_TYPE::Atom &atom)
 }
 
 template <typename RULE_TYPE, typename STATE_TYPE>
-static Set<typename RULE_TYPE::HeadRelationType> applyRule(RULE_TYPE &rule, const STATE_TYPE &state)
+static RelationSet<typename RULE_TYPE::HeadRelationType> applyRule(RULE_TYPE &rule, const STATE_TYPE &state)
 {
 	typedef typename RULE_TYPE::HeadRelationType HeadRelationType;
-	Set<HeadRelationType> derivedFacts;
+	RelationSet<HeadRelationType> derivedFacts;
 	auto it = state.template it<RULE_TYPE>();
 	while (it.hasNext())
 	{
@@ -491,25 +487,25 @@ static Set<typename RULE_TYPE::HeadRelationType> applyRule(RULE_TYPE &rule, cons
 }
 
 template <typename RELATION_TYPE>
-static Set<RELATION_TYPE> merge(const Set<RELATION_TYPE>&s1, const Set<RELATION_TYPE>&s2)
+static RelationSet<RELATION_TYPE> merge(const RelationSet<RELATION_TYPE>&s1, const RelationSet<RELATION_TYPE>&s2)
 {
-	Set<RELATION_TYPE> s3{s1};
+	RelationSet<RELATION_TYPE> s3{s1};
 	s3.set.insert(s2.set.begin(), s2.set.end());
 	return s3;
 }
 
 template <typename RELATION_TYPE, typename ... RELATIONs>
-static State<RELATIONs...> add(const Set<RELATION_TYPE>& facts, const State<RELATIONs...> &state) {
+static State<RELATIONs...> add(const RelationSet<RELATION_TYPE>& facts, const State<RELATIONs...> &state) {
 	typedef State<RELATIONs...> StateType;
 	StateType newState{state};
-	typedef Set<RELATION_TYPE> SetType;
+	typedef RelationSet<RELATION_TYPE> SetType;
 	auto& relation = get<SetType>(newState.relations);
 	relation = merge(relation, facts);
 	return newState;
 }
 
 template <typename RELATION_TYPE, typename ... RELATIONs>
-static void add(const Set<RELATION_TYPE>& facts, const State<RELATIONs...> &inState, State<RELATIONs...> &outState) {
+static void add(const RelationSet<RELATION_TYPE>& facts, const State<RELATIONs...> &inState, State<RELATIONs...> &outState) {
 	outState = add(facts, inState);
 }
 

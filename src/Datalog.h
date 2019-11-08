@@ -77,17 +77,10 @@ VariableOrValue<T> atomElement(const T& t) {
     return VariableOrValue<T>{t};
 };
 
-#if 1
 template<typename RELATION_TYPE, typename ... Ts>
 typename RELATION_TYPE::Atom atom(Ts&& ... elements) {
 	return typename RELATION_TYPE::Atom(forward_as_tuple(atomElement(elements)...));
 }
-#else
-template<typename RELATION_TYPE, typename ... Ts>
-typename RELATION_TYPE::Atom atom(Ts ... elements) {
-	return typename RELATION_TYPE::Atom(forward_as_tuple(atomElement(&elements)...));
-}
-#endif
 
 template <typename... Ts>
 struct Relation : tuple<Ts...>
@@ -194,8 +187,8 @@ struct RelationSet {
 template <typename RELATION_TYPE>
 static ostream& operator<<(ostream& out, const typename RELATION_TYPE::TupleType& t) {
 	out << "[";
-	apply([&out](auto &&... args) { ((out << "[" << args << "]"), ...); }, t);
-	out << "] ";
+	apply([&out](auto &&... args) { ((out << " " << args << " "), ...); }, t);
+	out << "]";
 	return out;
 }
 
@@ -217,6 +210,11 @@ struct State
 
 	typedef tuple<RelationSet<RELATIONs>...> SetsOfRelationsType;
 	SetsOfRelationsType relations;
+
+	template <typename RELATION_TYPE>
+	const typename RELATION_TYPE::Set& getSet() const {
+		return get<RelationSet<RELATION_TYPE>>(relations).set;
+	}
 
 	size_t size() const {
 		size_t totalSize = 0;

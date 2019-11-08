@@ -6,8 +6,8 @@ SRCS := ${SRCS} $(wildcard tests/*.cpp)
 TARGETS := $(TARGETS) $(SRCS:.cpp=) 
 
 # set the build configuration set 
-#BUILD := release
-BUILD := debug
+BUILD := release
+#BUILD := debug
 BIT := 64
 #BIT := 32
 

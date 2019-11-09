@@ -176,7 +176,6 @@ static ostream & operator<<(ostream &out, const RelationSet<RELATION_TYPE>& rela
 {
 	out << "\"" << typeid(relationSet).name() << "\"" << endl;
 	for (const auto& tuple : relationSet.set) {
-		//operator<< <RELATION_TYPE>(out, tuple);
 		operator<< <RELATION_TYPE>(out, tuple.second);
 		out << endl;
 	}
@@ -189,6 +188,9 @@ struct State
 	typedef tuple<RelationSet<RELATIONs>...> StateRelationsType;
 	StateRelationsType stateRelations;
 
+	State() {}
+
+	template <std::size_t N = sizeof...(RELATIONs), typename std::enable_if<(N>0), int>::type = 0>
 	State(const typename RELATIONs::Set&... stateRelations) : stateRelations(convert(stateRelations...)) {
 	}
 
@@ -474,26 +476,33 @@ static RelationSet<typename RULE_TYPE::HeadRelationType> applyRule(RULE_TYPE &ru
 }
 
 template <typename RELATION_TYPE>
-static RelationSet<RELATION_TYPE> merge(const RelationSet<RELATION_TYPE>&s1, const RelationSet<RELATION_TYPE>&s2)
+static void merge(RelationSet<RELATION_TYPE>& s1, RelationSet<RELATION_TYPE>&s2)
 {
-	RelationSet<RELATION_TYPE> s3{s1};
-	s3.set.insert(s2.set.begin(), s2.set.end());
-	return s3;
+	s2.set.merge(s1.set);
+}
+
+template<size_t I, typename STATE_RELATIONS_TYPE>
+static void merge(STATE_RELATIONS_TYPE& newState, STATE_RELATIONS_TYPE& state) {
+	auto& newSet = get<I>(newState.stateRelations);
+	auto& set = get<I>(state.stateRelations);
+	merge(newSet, set);
+}
+
+template <size_t ... Is, typename STATE_RELATIONS_TYPE>
+static void merge(STATE_RELATIONS_TYPE& newState, STATE_RELATIONS_TYPE& state, index_sequence<Is...>) {
+	((merge<Is>(newState, state)), ...);
+}
+
+template<typename ... RELATIONs>
+static void merge(State<RELATIONs...> &newState, State<RELATIONs...> &state) {
+	typedef typename State<RELATIONs...>::StateRelationsType StateRelationsType;
+	return merge(newState, state, make_index_sequence<tuple_size<StateRelationsType>::value>{});
 }
 
 template <typename RELATION_TYPE, typename ... RELATIONs>
-static State<RELATIONs...> add(const RelationSet<RELATION_TYPE>& facts, const State<RELATIONs...> &state) {
-	typedef State<RELATIONs...> StateType;
-	StateType newState{state};
+static void assign(RelationSet<RELATION_TYPE>&& facts, State<RELATIONs...> &state) {
 	typedef RelationSet<RELATION_TYPE> SetType;
-	auto& relation = get<SetType>(newState.stateRelations);
-	relation = merge(relation, facts);
-	return newState;
-}
-
-template <typename RELATION_TYPE, typename ... RELATIONs>
-static void add(const RelationSet<RELATION_TYPE>& facts, const State<RELATIONs...> &inState, State<RELATIONs...> &outState) {
-	outState = add(facts, inState);
+	merge(facts, get<SetType>(state.stateRelations));
 }
 
 template <typename ... RULE_TYPEs>
@@ -502,24 +511,25 @@ struct RuleSet {
 };
 
 template <typename ... RULE_TYPEs, typename... RELATIONs>
-static State<RELATIONs...> applyRuleSet(RuleSet<RULE_TYPEs...> &ruleSet, const State<RELATIONs...> &state) {
-	typedef State<RELATIONs...> StateType;
-	StateType newState{state};
-	apply([&state, &newState](auto &&... args) { ((add(applyRule(args, state), newState, newState)), ...); }, ruleSet.rules);
-	return newState;
+static void applyRuleSet(RuleSet<RULE_TYPEs...> &ruleSet, State<RELATIONs...> &state) {
+	// compute new state
+	State<RELATIONs...> newState;
+	apply([&state, &newState](auto &&... args) { ((assign(applyRule(args, state), newState)), ...); }, ruleSet.rules);
+	// merge new state
+	merge(newState, state);
 }
 
 template <typename ... RULE_TYPEs, typename... RELATIONs>
 static State<RELATIONs...> fixPoint(RuleSet<RULE_TYPEs...> &ruleSet, const State<RELATIONs...> &state) {
 	typedef State<RELATIONs...> StateType;
 	StateType newState{state};
-	size_t inStateSize = 0;
-	size_t outStateSize = 0;
+	size_t inSize = 0;
+	size_t outSize = 0;
 	do {
-		inStateSize = newState.size();
-		newState = applyRuleSet(ruleSet, newState);
-		outStateSize = newState.size();
-	} while (inStateSize != outStateSize);
+		inSize = newState.size();
+		applyRuleSet(ruleSet, newState);
+		outSize = newState.size();
+	} while (inSize != outSize);
 	return newState;
 }
 

@@ -91,7 +91,14 @@ struct Relation
 	typedef set<Ground> Set;
 	typedef pair<size_t, Ground> TrackedGround;
 	// TODO: this should be an unordered_set
-	typedef set<TrackedGround> TrackedSet;
+	struct compare {
+		bool operator() (const TrackedGround& lhs, const TrackedGround& rhs) const {
+			// ignore tracking number
+			return lhs.second < rhs.second;
+		}
+	};
+
+	typedef set<TrackedGround, compare> TrackedSet;
 };
 
 template <typename T>
@@ -163,6 +170,17 @@ static ostream& operator<<(ostream& out, const typename RELATION_TYPE::Ground& t
 	out << "[";
 	apply([&out](auto &&... args) { ((out << " " << args << " "), ...); }, t);
 	out << "]";
+	return out;
+}
+
+template<typename RELATION_TYPE>
+static ostream & operator<<(ostream &out, const typename RELATION_TYPE::Set& relationSet)
+{
+	out << "\"" << typeid(relationSet).name() << "\"" << endl;
+	for (const auto& tuple : relationSet) {
+		operator<< <RELATION_TYPE>(out, tuple);
+		out << endl;
+	}
 	return out;
 }
 
@@ -347,7 +365,7 @@ private:
 	static typename RELATION_TYPE::TrackedSet convert(const typename RELATION_TYPE::Set& set) {
 		typename RELATION_TYPE::TrackedSet trackedSet;
 		for (const auto& relation : set) {
-			trackedSet.insert({1, relation});
+			trackedSet.insert({0, relation});
 		}
 		return trackedSet;
 	}
@@ -394,6 +412,7 @@ static bool bindBodyAtomsToSlice(typename RULE_TYPE::BodyType &atoms,
 {
 	auto factPtr = get<I>(slice);
 	bool success = false;
+	// TODO: do we need this check?
 	if (factPtr)
 	{
 		const auto &fact = *factPtr;
@@ -450,8 +469,26 @@ static typename RELATION_TYPE::Ground ground(const typename RELATION_TYPE::Atom 
 	return groundAtom;
 }
 
+template <size_t I, typename RULE_TYPE>
+static bool newSlice(size_t iteration, const typename RULE_TYPE::SliceType &slice)
+{
+	const auto &fact = *get<I>(slice);
+	return fact.first == iteration;	
+}
+
+template <typename RULE_TYPE, size_t... Is>
+static bool newSlice(size_t iteration, const typename RULE_TYPE::SliceType &slice, index_sequence<Is...>)
+{
+	return ((newSlice<Is, RULE_TYPE>(iteration, slice)) or ...);
+}
+
+template <typename RULE_TYPE>
+static bool newSlice(size_t iteration, const typename RULE_TYPE::SliceType &slice) {
+	return newSlice<RULE_TYPE>(iteration, slice, make_index_sequence<tuple_size<typename RULE_TYPE::BodyType>::value>{});
+}
+
 template <typename RULE_TYPE, typename STATE_TYPE>
-static RelationSet<typename RULE_TYPE::HeadRelationType> applyRule(RULE_TYPE &rule, const STATE_TYPE &state)
+static RelationSet<typename RULE_TYPE::HeadRelationType> applyRule(size_t iteration, RULE_TYPE &rule, const STATE_TYPE &state)
 {
 	typedef typename RULE_TYPE::HeadRelationType HeadRelationType;
 	RelationSet<HeadRelationType> derivedFacts;
@@ -459,17 +496,14 @@ static RelationSet<typename RULE_TYPE::HeadRelationType> applyRule(RULE_TYPE &ru
 	while (it.hasNext())
 	{
 		auto slice = it.next();
-		if (bindBodyAtomsToSlice<RULE_TYPE>(rule.body, slice))
-		{
-			// successful bind, therefore add (grounded) head atom to new state
-			//cout << "successful bind of body" << endl;
-			auto derivedFact = ground<HeadRelationType>(rule.head);
-			//derivedFacts.set.insert(derivedFact);
-			derivedFacts.set.insert({1, derivedFact});
-		}
-		else
-		{
-			//cout << "failed to bind body" << endl;
+		// does this slice contain a novel combination of ground atoms?
+		if (newSlice<RULE_TYPE>(iteration, slice)) {
+			// try to bind rule body with slice
+			if (bindBodyAtomsToSlice<RULE_TYPE>(rule.body, slice))
+			{
+				// successful bind, therefore add (grounded) head atom to new state
+				derivedFacts.set.insert({iteration + 1, ground<HeadRelationType>(rule.head)});
+			}
 		}
 	}
 	return derivedFacts;
@@ -511,10 +545,10 @@ struct RuleSet {
 };
 
 template <typename ... RULE_TYPEs, typename... RELATIONs>
-static void applyRuleSet(RuleSet<RULE_TYPEs...> &ruleSet, State<RELATIONs...> &state) {
+static void applyRuleSet(size_t iteration, RuleSet<RULE_TYPEs...> &ruleSet, State<RELATIONs...> &state) {
 	// compute new state
 	State<RELATIONs...> newState;
-	apply([&state, &newState](auto &&... args) { ((assign(applyRule(args, state), newState)), ...); }, ruleSet.rules);
+	apply([&iteration, &state, &newState](auto &&... args) { ((assign(applyRule(iteration, args, state), newState)), ...); }, ruleSet.rules);
 	// merge new state
 	merge(newState, state);
 }
@@ -523,13 +557,16 @@ template <typename ... RULE_TYPEs, typename... RELATIONs>
 static State<RELATIONs...> fixPoint(RuleSet<RULE_TYPEs...> &ruleSet, const State<RELATIONs...> &state) {
 	typedef State<RELATIONs...> StateType;
 	StateType newState{state};
+	size_t iteration = 0;
 	size_t inSize = 0;
 	size_t outSize = 0;
 	do {
 		inSize = newState.size();
-		applyRuleSet(ruleSet, newState);
+		applyRuleSet(iteration, ruleSet, newState);
+		iteration++;
 		outSize = newState.size();
 	} while (inSize != outSize);
+	cout << "fix point in " << iteration + 1 << " iterations" << endl;
 	return newState;
 }
 

@@ -230,11 +230,15 @@ bool po1()
 
     cout << "before = " << state << endl;
     state = fixPoint(rules, state);
-    cout << "after = " << state << endl;
 
     #include "a.txt"
 
     const auto& computedA = state.getSet<A>();
+
+    cout << "result = ";
+    operator<< <A>(cout, computedA);
+    cout << endl;
+
     return computedA == aOut;
 }
 #endif

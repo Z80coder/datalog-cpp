@@ -3,6 +3,7 @@
 
 #include <tuple>
 #include <set>
+#include <unordered_set>
 #include <variant>
 #include <vector>
 #include <map>
@@ -11,8 +12,6 @@
 #include <limits>
 #include <cassert>
 #include <iostream>
-
-//#define TRACE_ON
 
 namespace datalog
 {
@@ -83,12 +82,15 @@ typename RELATION_TYPE::Atom atom(Ts&& ... elements) {
 }
 
 template <typename... Ts>
-struct Relation : tuple<Ts...>
+struct Relation                                                                                                        
 {
-	typedef tuple<Ts...> TupleType;
+	typedef tuple<Ts...> Ground;
+	typedef tuple<tuple<size_t, Ts>...> TrackedGround;
 	typedef tuple<VariableOrValue<Ts>...> Atom;
-	using tuple<Ts...>::tuple;
-	typedef set<Relation> Set;
+
+	// TODO: this should be an unordered_set
+	typedef set<Ground> Set;
+	typedef set<TrackedGround> TrackedSet;
 };
 
 template <typename T>
@@ -131,43 +133,19 @@ bool bind(VariableOrValue<VALUE_TYPE> &s, const VALUE_TYPE &v)
 template <typename ATOM_TYPE, typename GROUND_TYPE, size_t... Is>
 static bool bind(ATOM_TYPE &atom, const GROUND_TYPE &fact, index_sequence<Is...>)
 {
-	bool success = ((bind(get<Is>(atom), get<Is>(fact))) and ...);
-	if (success)
-	{
-		#if 0
-		{
-			cout << "bound ";
-			print(cout, atom);
-			cout << " to ";
-			print(cout, fact);
-			cout << endl;
-		}
-		#endif
-	}
-	else
-	{
-		#if 0
-		cout << "failed to bind ";
-		print(cout, atom);
-		cout << " with ";
-		print(cout, fact);
-		cout << endl;
-		#endif
-	}
-	return success;
+	return ((bind(get<Is>(atom), get<Is>(fact))) and ...);
 }
 
-template <typename RELATION_TYPE>
-static bool bind(typename RELATION_TYPE::Atom &atom, const RELATION_TYPE &fact)
+template <typename ATOM_TYPE, typename GROUND_TYPE>
+static bool bind(ATOM_TYPE &atom, const GROUND_TYPE &fact)
 {
-	constexpr size_t tupleSize = tuple_size<typename RELATION_TYPE::TupleType>::value;
-	return bind<typename RELATION_TYPE::Atom, typename RELATION_TYPE::TupleType>(atom, fact, make_index_sequence<tupleSize>{});
+	constexpr size_t tupleSize = tuple_size<GROUND_TYPE>::value;
+	return bind<ATOM_TYPE, GROUND_TYPE>(atom, fact, make_index_sequence<tupleSize>{});
 }
 
 template <typename HEAD_RELATION, typename... BODY_RELATIONs>
 struct Rule
 {
-	typedef Rule Define;
 	typedef HEAD_RELATION HeadRelationType;
 	typedef typename HEAD_RELATION::Atom HeadType;
 	HeadType head;
@@ -176,7 +154,7 @@ struct Rule
 	BodyType body;
 	typedef tuple<BODY_RELATIONs...> BodyRelations;
 	typedef tuple<typename BODY_RELATIONs::Set::const_iterator...> BodyRelationsIteratorType;
-	typedef tuple<const BODY_RELATIONs *...> SliceType;
+	typedef tuple<const typename BODY_RELATIONs::Ground *...> SliceType;
 };
 
 template<typename RELATION_TYPE>
@@ -185,7 +163,7 @@ struct RelationSet {
 };
 
 template <typename RELATION_TYPE>
-static ostream& operator<<(ostream& out, const typename RELATION_TYPE::TupleType& t) {
+static ostream& operator<<(ostream& out, const typename RELATION_TYPE::Ground& t) {
 	out << "[";
 	apply([&out](auto &&... args) { ((out << " " << args << " "), ...); }, t);
 	out << "]";
@@ -206,20 +184,20 @@ static ostream & operator<<(ostream &out, const RelationSet<RELATION_TYPE>& rela
 template <typename... RELATIONs>
 struct State
 {
-	explicit State(const typename RELATIONs::Set&... relations) : relations{{relations}...} {}
+	explicit State(const typename RELATIONs::Set&... relationSets) : relationSets{{relationSets}...} {}
 
 	typedef tuple<RelationSet<RELATIONs>...> SetsOfRelationsType;
-	SetsOfRelationsType relations;
+	SetsOfRelationsType relationSets;
 
 	template <typename RELATION_TYPE>
 	const typename RELATION_TYPE::Set& getSet() const {
-		return get<RelationSet<RELATION_TYPE>>(relations).set;
+		return get<RelationSet<RELATION_TYPE>>(relationSets).set;
 	}
 
 	size_t size() const {
 		size_t totalSize = 0;
 		auto inc = [](size_t& size, size_t inc) { size += inc; };
-		apply([&totalSize, &inc](auto &&... args) { ((inc(totalSize, args.set.size())), ...); }, relations);
+		apply([&totalSize, &inc](auto &&... args) { ((inc(totalSize, args.set.size())), ...); }, relationSets);
 		return totalSize;
 	}
 
@@ -244,7 +222,7 @@ struct State
 			if (it != relation.set.end())
 			{
 				// TODO: avoid cast if possible
-				sliceElement = reinterpret_cast<const RelationType *>(&*it);
+				sliceElement = reinterpret_cast<const typename RelationType::Ground *>(&*it);
 			}
 			else
 			{
@@ -308,13 +286,6 @@ struct State
 			auto indexSequence = make_index_sequence<tuple_size<RelationsIteratorType>::value>{};
 			pick(relations, slice, indexSequence);
 			iterationFinished = next(relations, iterators, indexSequence);
-			#if 0
-			{
-				cout << "slice = ";
-				print(cout, slice);
-				cout << endl;
-			}
-			#endif
 			return slice;
 		}
 
@@ -350,7 +321,7 @@ struct State
 	template <typename RULE_TYPE>
 	Iterator<RULE_TYPE> it() const
 	{
-		Iterator<RULE_TYPE> it{relations};
+		Iterator<RULE_TYPE> it{relationSets};
 		return it;
 	}
 };
@@ -358,7 +329,7 @@ struct State
 template <typename... RELATIONs>
 ostream & operator<<(ostream &out, const State<RELATIONs...>& state) {
 	out << "[";
-	apply([&out](auto &&... args) { ((operator<<(out, args)), ...); }, state.relations);
+	apply([&out](auto &&... args) { ((operator<<(out, args)), ...); }, state.relationSets);
 	out << "] ";
 	return out;
 }
@@ -419,15 +390,16 @@ void ground(const VariableOrValue<VALUE_TYPE> &s, VALUE_TYPE &v)
 }
 
 template <typename RELATION_TYPE, size_t... Is>
-static void ground(const typename RELATION_TYPE::Atom &atom, RELATION_TYPE &groundAtom, index_sequence<Is...>)
+static void ground(const typename RELATION_TYPE::Atom &atom, typename RELATION_TYPE::Ground &groundAtom, index_sequence<Is...>)
 {
 	((ground(get<Is>(atom), get<Is>(groundAtom))), ...);
 }
 
 template <typename RELATION_TYPE>
-static RELATION_TYPE ground(const typename RELATION_TYPE::Atom &atom)
+static typename RELATION_TYPE::Ground ground(const typename RELATION_TYPE::Atom &atom)
 {
-	RELATION_TYPE groundAtom;
+	// TODO: life to caller
+	typename RELATION_TYPE::Ground groundAtom;
 	ground<RELATION_TYPE>(atom, groundAtom, make_index_sequence<tuple_size<typename RELATION_TYPE::Atom>::value>{});
 	return groundAtom;
 }
@@ -446,13 +418,6 @@ static RelationSet<typename RULE_TYPE::HeadRelationType> applyRule(RULE_TYPE &ru
 			// successful bind, therefore add (grounded) head atom to new state
 			//cout << "successful bind of body" << endl;
 			auto derivedFact = ground<HeadRelationType>(rule.head);
-			#ifdef TRACE_ON
-			{
-				cout << "adding: " << typeid(HeadRelationType).name() << " ";
-				datalog::print<typename HeadRelationType::TupleType>(cout, derivedFact); // TODO: avoid need for type
-				cout << endl;
-			}
-			#endif
 			derivedFacts.set.insert(derivedFact);
 		}
 		else
@@ -476,7 +441,7 @@ static State<RELATIONs...> add(const RelationSet<RELATION_TYPE>& facts, const St
 	typedef State<RELATIONs...> StateType;
 	StateType newState{state};
 	typedef RelationSet<RELATION_TYPE> SetType;
-	auto& relation = get<SetType>(newState.relations);
+	auto& relation = get<SetType>(newState.relationSets);
 	relation = merge(relation, facts);
 	return newState;
 }
@@ -507,14 +472,8 @@ static State<RELATIONs...> fixPoint(RuleSet<RULE_TYPEs...> &ruleSet, const State
 	size_t outStateSize = 0;
 	do {
 		inStateSize = newState.size();
-#ifdef TRACE_ON
-		cout << "in size = " << inStateSize << endl;
-#endif
 		newState = applyRuleSet(ruleSet, newState);
 		outStateSize = newState.size();
-#ifdef TRACE_ON
-		cout << "out size = " << outStateSize << endl;
-#endif
 	} while (inStateSize != outStateSize);
 	return newState;
 }

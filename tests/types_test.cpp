@@ -128,6 +128,7 @@ bool test2()
     return true;
 }
 
+#if 0
 bool po1()
 {
     typedef unsigned int Number;
@@ -236,11 +237,13 @@ bool po1()
     const auto& computedA = state.getSet<A>();
     return computedA == aOut;
 }
+#endif
 
 int main()
 {
     bool ok1 = test1();
     bool ok2= test2();
+    #if 0
     bool ok3 = po1();
     if (!(ok1 and ok2 and ok3)) {
         cout << "FAIL" << endl;
@@ -249,5 +252,6 @@ int main()
         cout << "PASSED" << endl;
         return 0;
     }
+    #endif
     return 1;
 }

@@ -61,6 +61,25 @@ bool test2()
     struct AcademicAncestor : Relation<NameType, NameType>{};
     struct QueryResult : Relation<NameType>{};
 
+    // Extensional data
+    NameType andrew{"Andrew Rice"};
+    NameType mistral{"Mistral Contrastin"};
+    NameType dominic{"Dominic Orchard"};
+    NameType andy{"Andy Hopper"};
+    NameType alan{"Alan Mycroft"};
+    NameType rod{"Rod Burstall"};
+    NameType robin{"Robin Milner"};
+    NameType david{"David Wheeler"};
+
+    Adviser::Set advisers{
+        {andrew, mistral},
+        {dominic, mistral},
+        {andy, andrew},
+        {alan, dominic},
+        {david, andy},
+        {rod, alan},
+        {robin, alan}};
+
     // Rule1
     Variable<NameType> x, y, z;
 
@@ -80,35 +99,6 @@ bool test2()
         }
     };
 
-    // Extensional data
-    NameType andrew{"Andrew Rice"};
-    NameType mistral{"Mistral Contrastin"};
-    NameType dominic{"Dominic Orchard"};
-    NameType andy{"Andy Hopper"};
-    NameType alan{"Alan Mycroft"};
-    NameType rod{"Rod Burstall"};
-    NameType robin{"Robin Milner"};
-    NameType david{"David Wheeler"};
-
-    Adviser::Set advisers{
-        {andrew, mistral},
-        {dominic, mistral},
-        {andy, andrew},
-        {alan, dominic},
-        {david, andy},
-        {rod, alan},
-        {robin, alan}};
-    State<Adviser, AcademicAncestor, QueryResult> state{advisers, {}, {}};
-
-    // Apply multiple rules
-    {
-        RuleSet<DirectAcademicAncestor, IndirectAcademicAncestor> rules{{rule1, rule2}};
-
-        cout << "before = " << state << endl;
-        state = fixPoint(rules, state);
-        cout << "after = " << state << endl;
-    }
-
     // Query
     struct Query : Rule<QueryResult, AcademicAncestor, AcademicAncestor> {} query{
         atom<QueryResult>(x),
@@ -118,9 +108,12 @@ bool test2()
         }
     };
 
-    // Apply a query
+    // Apply multiple rules
     {
-        RuleSet<Query> rules{query};
+        State<Adviser, AcademicAncestor, QueryResult> state{advisers, {}, {}};
+        RuleSet<DirectAcademicAncestor, IndirectAcademicAncestor, Query> rules{{rule1, rule2, query}};
+
+        cout << "before = " << state << endl;
         state = fixPoint(rules, state);
         cout << "after = " << state << endl;
     }
@@ -228,7 +221,7 @@ bool po1()
         {rule1, rule2, rule3, rule4, rule5, rule6, rule7, rule8, rule9, rule10, rule11, rule12, rule13, rule14, rule15, rule16, rule17, rule18, rule19}
     };
 
-    cout << "before = " << state << endl;
+    //cout << "before = " << state << endl;
     state = fixPoint(rules, state);
 
     #include "a.txt"
@@ -247,7 +240,7 @@ int main()
 {
     bool ok1 = test1();
     bool ok2= test2();
-    #if 1
+#if 1
     bool ok3 = po1();
     if (!(ok1 and ok2 and ok3)) {
         cout << "FAIL" << endl;
@@ -256,6 +249,6 @@ int main()
         cout << "PASSED" << endl;
         return 0;
     }
-    #endif
+#endif
     return 1;
 }

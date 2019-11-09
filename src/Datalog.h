@@ -8,6 +8,7 @@
 #include <vector>
 #include <map>
 #include <memory>
+#include <numeric>
 #include <optional>
 #include <limits>
 #include <cassert>
@@ -200,6 +201,11 @@ static ostream & operator<<(ostream &out, const RelationSet<RELATION_TYPE>& rela
 	return out;
 }
 
+template<typename RELATION_TYPE>
+struct RelationSize {
+	size_t size = numeric_limits<size_t>::max();
+};
+
 template <typename... RELATIONs>
 struct State
 {
@@ -217,11 +223,41 @@ struct State
 		return convert<RELATION_TYPE>(get<RelationSet<RELATION_TYPE>>(stateRelations).set);
 	}
 
-	size_t size() const {
-		size_t totalSize = 0;
-		auto inc = [](size_t& size, size_t inc) { size += inc; };
-		apply([&totalSize, &inc](auto &&... args) { ((inc(totalSize, args.set.size())), ...); }, stateRelations);
-		return totalSize;
+	typedef tuple<RelationSize<RELATIONs>...> StateSizesType;
+
+	template<size_t I>
+	void sizes(StateSizesType& s) const {
+		get<I>(s).size = get<I>(stateRelations).set.size();
+	}
+
+	template<size_t ... Is>
+	void sizes(StateSizesType& s, index_sequence<Is...>) const {
+		((sizes<Is>(s)), ...);
+	}
+
+	void sizes(StateSizesType& s) const {
+		sizes(s, make_index_sequence<tuple_size<StateSizesType>::value>{});
+	}
+
+	static size_t size(const StateSizesType& s) {
+		size_t sum = 0;
+		auto add = [&sum](size_t size) { sum += size; };
+		apply([&add](auto &&... args) { ((add(args.size)), ...); }, s);
+		return sum;
+	}
+
+	template<size_t I>
+	static void diff(StateSizesType& a, const StateSizesType& b) {
+		get<I>(a).size = get<I>(a).size - get<I>(b).size;
+	}
+
+	template<size_t ... Is>
+	static void diff(StateSizesType& a, const StateSizesType& b, index_sequence<Is...>) {
+		((diff<Is>(a, b)), ...);
+	}
+
+	static void diff(StateSizesType& a, const StateSizesType& b) {
+		diff(a, b, make_index_sequence<tuple_size<StateSizesType>::value>{});
 	}
 
 	template<typename RULE_TYPE>
@@ -412,7 +448,6 @@ static bool bindBodyAtomsToSlice(typename RULE_TYPE::BodyType &atoms,
 {
 	auto factPtr = get<I>(slice);
 	bool success = false;
-	// TODO: do we need this check?
 	if (factPtr)
 	{
 		const auto &fact = *factPtr;
@@ -470,42 +505,72 @@ static typename RELATION_TYPE::Ground ground(const typename RELATION_TYPE::Atom 
 }
 
 template <size_t I, typename RULE_TYPE>
-static bool newSlice(size_t iteration, const typename RULE_TYPE::SliceType &slice)
+static bool unseenSlice(size_t iteration, const typename RULE_TYPE::SliceType &slice)
 {
-	const auto &fact = *get<I>(slice);
-	return fact.first == iteration;	
+	auto factPtr = get<I>(slice);
+	if (factPtr) {
+		const auto &fact = *factPtr;
+		return fact.first == iteration;	
+	}
+	return false;
 }
 
 template <typename RULE_TYPE, size_t... Is>
-static bool newSlice(size_t iteration, const typename RULE_TYPE::SliceType &slice, index_sequence<Is...>)
+static bool unseenSlice(size_t iteration, const typename RULE_TYPE::SliceType &slice, index_sequence<Is...>)
 {
-	return ((newSlice<Is, RULE_TYPE>(iteration, slice)) or ...);
+	return ((unseenSlice<Is, RULE_TYPE>(iteration, slice)) or ...);
 }
 
 template <typename RULE_TYPE>
-static bool newSlice(size_t iteration, const typename RULE_TYPE::SliceType &slice) {
-	return newSlice<RULE_TYPE>(iteration, slice, make_index_sequence<tuple_size<typename RULE_TYPE::BodyType>::value>{});
+static bool unseenSlice(size_t iteration, const typename RULE_TYPE::SliceType &slice) {
+	return unseenSlice<RULE_TYPE>(iteration, slice, make_index_sequence<tuple_size<typename RULE_TYPE::BodyType>::value>{});
+}
+
+template<size_t I, typename RULE_TYPE, typename STATE_TYPE>
+static bool unseenSlicePossible(const typename STATE_TYPE::StateSizesType& stateSizeDelta) {
+	typedef typename tuple_element<I, typename RULE_TYPE::BodyRelations>::type RelationType;
+	const auto& sizeDelta = get<RelationSize<RelationType>>(stateSizeDelta);
+	return sizeDelta.size > 0;
+}
+
+template<typename RULE_TYPE, typename STATE_TYPE, size_t ... Is>
+static bool unseenSlicePossible(const typename STATE_TYPE::StateSizesType& stateSizeDelta, index_sequence<Is...>) {
+	return ((unseenSlicePossible<Is, RULE_TYPE, STATE_TYPE>(stateSizeDelta)) or ...);
+}
+
+template<typename RULE_TYPE, typename STATE_TYPE>
+static bool unseenSlicePossible(const typename STATE_TYPE::StateSizesType& stateSizeDelta) {
+	auto indexSequence = make_index_sequence<tuple_size<typename RULE_TYPE::BodyRelations>::value>{};
+	return unseenSlicePossible<RULE_TYPE, STATE_TYPE>(stateSizeDelta, indexSequence);
 }
 
 template <typename RULE_TYPE, typename STATE_TYPE>
-static RelationSet<typename RULE_TYPE::HeadRelationType> applyRule(size_t iteration, RULE_TYPE &rule, const STATE_TYPE &state)
+static RelationSet<typename RULE_TYPE::HeadRelationType> applyRule(
+	size_t iteration, 
+	const typename STATE_TYPE::StateSizesType& stateSizeDelta,
+	RULE_TYPE &rule, 
+	const STATE_TYPE &state
+)
 {
 	typedef typename RULE_TYPE::HeadRelationType HeadRelationType;
 	RelationSet<HeadRelationType> derivedFacts;
-	auto it = state.template it<RULE_TYPE>();
-	while (it.hasNext())
-	{
-		auto slice = it.next();
-		// does this slice contain a novel combination of ground atoms?
-		if (newSlice<RULE_TYPE>(iteration, slice)) {
-			// try to bind rule body with slice
-			if (bindBodyAtomsToSlice<RULE_TYPE>(rule.body, slice))
-			{
-				// successful bind, therefore add (grounded) head atom to new state
-				derivedFacts.set.insert({iteration + 1, ground<HeadRelationType>(rule.head)});
-			}
+	// does the body of this rule refer to relations with new data?
+	if (unseenSlicePossible<RULE_TYPE, STATE_TYPE>(stateSizeDelta)) {
+		auto it = state.template it<RULE_TYPE>();
+		while (it.hasNext())
+		{
+			auto slice = it.next();
+			// does this slice contain a novel combination of ground atoms?
+			if (unseenSlice<RULE_TYPE>(iteration, slice)) {
+				// try to bind rule body with slice
+				if (bindBodyAtomsToSlice<RULE_TYPE>(rule.body, slice))
+				{
+					// successful bind, therefore add (grounded) head atom to new state
+					derivedFacts.set.insert({iteration + 1, ground<HeadRelationType>(rule.head)});
+				}
+			} 
 		}
-	}
+	} 
 	return derivedFacts;
 }
 
@@ -545,27 +610,35 @@ struct RuleSet {
 };
 
 template <typename ... RULE_TYPEs, typename... RELATIONs>
-static void applyRuleSet(size_t iteration, RuleSet<RULE_TYPEs...> &ruleSet, State<RELATIONs...> &state) {
+static void applyRuleSet(
+	size_t iteration, 
+	typename State<RELATIONs...>::StateSizesType& stateSizeDelta,
+	RuleSet<RULE_TYPEs...> &ruleSet, 
+	State<RELATIONs...> &state
+) {
 	// compute new state
 	State<RELATIONs...> newState;
-	apply([&iteration, &state, &newState](auto &&... args) { ((assign(applyRule(iteration, args, state), newState)), ...); }, ruleSet.rules);
+	apply([&iteration, &stateSizeDelta, &state, &newState](auto &&... args) { 
+		((assign(applyRule(iteration, stateSizeDelta, args, state), newState)), ...); 
+	}, ruleSet.rules);
 	// merge new state
+	typename State<RELATIONs...>::StateSizesType before;
+	state.sizes(before);
 	merge(newState, state);
+	state.sizes(stateSizeDelta);
+	state.diff(stateSizeDelta, before);
 }
 
 template <typename ... RULE_TYPEs, typename... RELATIONs>
 static State<RELATIONs...> fixPoint(RuleSet<RULE_TYPEs...> &ruleSet, const State<RELATIONs...> &state) {
 	typedef State<RELATIONs...> StateType;
 	StateType newState{state};
-	size_t iteration = 0;
-	size_t inSize = 0;
-	size_t outSize = 0;
+	typename State<RELATIONs...>::StateSizesType stateSizeDelta;
+	size_t iteration = 0; // TODO: make this the max iterator in state, to allow warm restart
 	do {
-		inSize = newState.size();
-		applyRuleSet(iteration, ruleSet, newState);
+		applyRuleSet(iteration, stateSizeDelta, ruleSet, newState);
 		iteration++;
-		outSize = newState.size();
-	} while (inSize != outSize);
+	} while (StateType::size(stateSizeDelta) > 0);
 	cout << "fix point in " << iteration + 1 << " iterations" << endl;
 	return newState;
 }

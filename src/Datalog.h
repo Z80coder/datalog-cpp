@@ -8,6 +8,7 @@
 #include <limits>
 #include <cassert>
 #include <iostream>
+#include <memory>
 
 namespace datalog
 {
@@ -39,9 +40,19 @@ struct Variable : optional<T>
 	}
 };
 
+template<typename T>
+unique_ptr<Variable<T>> var() {
+	return make_unique<Variable<T>>();
+}
+
 template <typename T>
 static void unbind(Variable<T>* t) {
     t->unbind();
+}
+
+template <typename T>
+static void unbind(unique_ptr<Variable<T>>& t) {
+    unbind(t.get());
 }
 
 template <typename T>
@@ -67,6 +78,11 @@ static bool bind(const T& a, Variable<T>* b) {
     return true;
 }
 
+template <typename T>
+static bool bind(const T& a, unique_ptr<Variable<T>>& b) {
+	return bind(a, b.get());
+}
+
 template <typename GROUND_TYPE, typename ... Ts, size_t... Is>
 static bool bind(const GROUND_TYPE &fact, tuple<Ts...> &atom, index_sequence<Is...>)
 {
@@ -84,6 +100,12 @@ static void ground(const Variable<T>* s, T &v)
 {
     assert(s->isBound());
     v = s->value();
+}
+
+template <typename T>
+static void ground(const unique_ptr<Variable<T>>& s, T &v)
+{
+	ground(s.get(), v);
 }
 
 template <typename T>
@@ -506,6 +528,7 @@ static bool unseenSlice(size_t iteration, const typename RULE_TYPE::SliceType &s
 template <typename RULE_TYPE>
 static bool unseenSlice(size_t iteration, const typename RULE_TYPE::SliceType &slice) {
 	return unseenSlice<RULE_TYPE>(iteration, slice, make_index_sequence<tuple_size<typename RULE_TYPE::BodyRelations>::value>{});
+	return true;
 }
 
 template<size_t I, typename RULE_TYPE, typename STATE_TYPE>
@@ -536,13 +559,14 @@ static RelationSet<typename RULE_TYPE::RuleType::HeadRelationType> applyRule(
 {
 	typedef typename RULE_TYPE::RuleType::HeadRelationType HeadRelationType;
 	RelationSet<HeadRelationType> derivedFacts;
-	// does the body of this rule refer to relations with new data?
+	// does the body of this rule refer to relations with unseen data?
 	if (unseenSlicePossible<typename RULE_TYPE::RuleType, STATE_TYPE>(stateSizeDelta)) {
+		// OK, we now exhaustively check all relations for unseen combinations
 		auto it = state.template it<typename RULE_TYPE::RuleType>();
 		while (it.hasNext())
 		{
 			auto slice = it.next();
-			// does this slice contain a novel combination of ground atoms?
+			// does this slice contain an unseen combination of ground atoms?
 			if (unseenSlice<typename RULE_TYPE::RuleType>(iteration, slice)) {
 				// try to bind rule body with slice
 				if (bindBodyAtomsToSlice<RULE_TYPE, typename RULE_TYPE::RuleType>(rule.body, slice))

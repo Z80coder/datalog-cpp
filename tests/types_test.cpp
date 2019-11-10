@@ -33,10 +33,10 @@ bool test1()
         {thor, god}};
 
     // Rule
-    Variable<Name> x;
+    auto x = var<Name>();
     auto rule1 = Rule<Mortal, Thing>::rule(
-        Mortal::head(&x),
-        Thing::clause(&x, person)
+        Mortal::head(x),
+        Thing::clause(x, person)
     );
 
     State<Thing, Mortal> state{things, {}};
@@ -77,20 +77,23 @@ bool test2()
         {rod, alan},
         {robin, alan}};
 
-    Variable<Name> x, y, z;
+    auto x = var<Name>();
+    auto y = var<Name>();
+    auto z = var<Name>();
+
     auto directAcademicAncestor = Rule<AcademicAncestor, Adviser>::rule(
-        AcademicAncestor::head(&x, &y),
-        Adviser::clause(&x, &y)
+        AcademicAncestor::head(x, y),
+        Adviser::clause(x, y)
     );
     auto indirectAcademicAncestor = Rule<AcademicAncestor, Adviser, AcademicAncestor>::rule(
-        AcademicAncestor::head(&x, &z),
-        Adviser::clause(&x, &y),
-        AcademicAncestor::clause(&y, &z)
+        AcademicAncestor::head(x, z),
+        Adviser::clause(x, y),
+        AcademicAncestor::clause(y, z)
     );
     auto query = Rule<QueryResult, AcademicAncestor, AcademicAncestor>::rule(
-        QueryResult::head(&x),
-        AcademicAncestor::clause(robin, &x),
-        AcademicAncestor::clause(&x, mistral)
+        QueryResult::head(x),
+        AcademicAncestor::clause(robin, x),
+        AcademicAncestor::clause(x, mistral)
     );
 
     // Apply rules
@@ -119,24 +122,21 @@ bool po1()
 
     State<Check, In, A> state{check, in, {}};
 
-    // TODO
-    //auto var = []() { return make_unique<Variable<Number>>(); };
-    auto var = []() { return new Variable<Number>; };
-    auto a = var();
-    auto b = var();
-    auto c = var();
-    auto d = var();
-    auto e = var();
-    auto f = var();
-    auto i = var();
-    auto anon1 = var();
-    auto anon2 = var();
-    auto anon3 = var();
-    auto anon4 = var();
-    auto anon5 = var();
-    auto anon6 = var();
-    auto anon7 = var();
-    auto anon8 = var();
+    auto a = var<Number>();
+    auto b = var<Number>();
+    auto c = var<Number>();
+    auto d = var<Number>();
+    auto e = var<Number>();
+    auto f = var<Number>();
+    auto i = var<Number>();
+    auto anon1 = var<Number>();
+    auto anon2 = var<Number>();
+    auto anon3 = var<Number>();
+    auto anon4 = var<Number>();
+    auto anon5 = var<Number>();
+    auto anon6 = var<Number>();
+    auto anon7 = var<Number>();
+    auto anon8 = var<Number>();
     
     typedef Rule<A, Check, In> P0RuleType;
 

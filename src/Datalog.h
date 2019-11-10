@@ -3,11 +3,6 @@
 
 #include <tuple>
 #include <set>
-#include <unordered_set>
-#include <variant>
-#include <vector>
-#include <map>
-#include <memory>
 #include <numeric>
 #include <optional>
 #include <limits>
@@ -45,49 +40,81 @@ struct Variable : optional<T>
 };
 
 template <typename T>
-struct VariableOrValue : public variant<T, Variable<T> *>
+static void unbind1(Variable<T>* t) {
+    t->unbind();
+}
+
+template <typename T>
+static void unbind1(const T& t) {}
+
+template <typename... Ts>
+static void unbind1(const tuple<Ts...> &tuple)
 {
-	typedef Variable<T> *VariableType;
+	apply([](auto &&... args) { ((unbind1(args), ...)); }, tuple);
+}
 
-	bool isVar() const
-	{
-		return holds_alternative<VariableType>(*this);
-	}
+template <typename T>
+static bool bind1(const T& a, const T& b) {
+    return a == b;
+}
 
-	const VariableType
-	getVar() const
-	{
-		return get<VariableType>(*this);
-	}
+template <typename T>
+static bool bind1(const T& a, Variable<T>* b) {
+    if (b->isBound()) {
+        return b->value() == a;
+    }
+    b->bind(a);
+    return true;
+}
 
-	const T &
-	getVal() const
-	{
-		return get<T>(*this);
-	}
-};
+template <typename GROUND_TYPE, typename ... Ts, size_t... Is>
+static bool bind1(const GROUND_TYPE &fact, tuple<Ts...> &atom, index_sequence<Is...>)
+{
+	return ((bind1(get<Is>(fact), get<Is>(atom))) and ...);
+}
 
-template<typename T>
-VariableOrValue<T> atomElement(Variable<T>& t) { 
-    return VariableOrValue<T>{&t};
-};
+template <typename GROUND_TYPE, typename ... Ts>
+static bool bind1(const GROUND_TYPE &fact, tuple<Ts...> &atom)
+{
+	return bind1(fact, atom, make_index_sequence<tuple_size<GROUND_TYPE>::value>{});
+}
 
-template<typename T>
-VariableOrValue<T> atomElement(const T& t) { 
-    return VariableOrValue<T>{t};
-};
+template <typename T>
+static void ground1(const Variable<T>* s, T &v)
+{
+    assert(s->isBound());
+    v = s->value();
+}
 
-template<typename RELATION_TYPE, typename ... Ts>
-typename RELATION_TYPE::Atom atom(Ts&& ... elements) {
-	return typename RELATION_TYPE::Atom(forward_as_tuple(atomElement(elements)...));
+template <typename T>
+static void ground1(const T &s, T &v)
+{
+    v = s;
+}
+
+template <typename RELATION_TYPE, typename ... Ts, size_t... Is>
+static void ground1(const tuple<Ts...> &atom, typename RELATION_TYPE::Ground &groundAtom, index_sequence<Is...>)
+{
+	((ground1(get<Is>(atom), get<Is>(groundAtom))), ...);
+}
+
+template <typename RELATION_TYPE, typename ... Ts>
+static typename RELATION_TYPE::Ground ground1(const tuple<Ts...> &atom)
+{
+	typename RELATION_TYPE::Ground groundAtom;
+	ground1<RELATION_TYPE>(atom, groundAtom, make_index_sequence<tuple_size<typename RELATION_TYPE::Ground>::value>{});
+	return groundAtom;
+}
+
+template <typename ... Ts>
+tuple<Ts...> atom(Ts&&... args) {
+    return tuple<Ts...>{args...};
 }
 
 template <typename... Ts>
 struct Relation                                                                                                        
 {
 	typedef tuple<Ts...> Ground;
-	typedef tuple<VariableOrValue<Ts>...> Atom;
-
 	// TODO: this should be an unordered_set
 	typedef set<Ground> Set;
 	typedef pair<size_t, Ground> TrackedGround;
@@ -100,70 +127,40 @@ struct Relation
 	};
 
 	typedef set<TrackedGround, compare> TrackedSet;
+
+	template <typename ... Us>
+	static tuple<Us...> head(Us&&... args) {
+		return atom(args...);
+	}
+
+	template <typename ... Us>
+	static tuple<Us...> clause(Us&&... args) {
+		return atom(args...);
+	}
+
 };
-
-template <typename T>
-static void unbind(const VariableOrValue<T> &VariableOrValue)
-{
-	if (VariableOrValue.isVar()) {
- 		VariableOrValue.getVar()->unbind();
-	}
-}
-
-template <typename... Ts>
-static void unbind(const tuple<VariableOrValue<Ts>...> &tuple)
-{
-	apply([](auto &&... args) { ((unbind(args), ...)); }, tuple);
-}
-
-// bind 1 VariableOrValue with 1 Value
-template <typename VALUE_TYPE>
-bool bind(VariableOrValue<VALUE_TYPE> &s, const VALUE_TYPE &v)
-{
-	bool success = false;
-	if (s.isVar())
-	{
-		Variable<VALUE_TYPE> &Variable = *s.getVar();
-		// has the Variable already been bound?
-		if (Variable.isBound())
-		{
-			// is it a consistent binding?
-			success = Variable.value() == v;
-		} else {
-			Variable.bind(v);
-			success = true;
-		}
-	} else {
-		success = s.getVal() == v;
-	}
-	return success;
-}
-
-template <typename ATOM_TYPE, typename GROUND_TYPE, size_t... Is>
-static bool bind(ATOM_TYPE &atom, const GROUND_TYPE &fact, index_sequence<Is...>)
-{
-	return ((bind(get<Is>(atom), get<Is>(fact))) and ...);
-}
-
-template <typename ATOM_TYPE, typename GROUND_TYPE>
-static bool bind(ATOM_TYPE &atom, const GROUND_TYPE &fact)
-{
-	constexpr size_t tupleSize = tuple_size<GROUND_TYPE>::value;
-	return bind<ATOM_TYPE, GROUND_TYPE>(atom, fact, make_index_sequence<tupleSize>{});
-}
 
 template <typename HEAD_RELATION, typename... BODY_RELATIONs>
 struct Rule
 {
 	typedef HEAD_RELATION HeadRelationType;
-	typedef typename HEAD_RELATION::Atom HeadType;
-	HeadType head;
-
-	typedef tuple<typename BODY_RELATIONs::Atom...> BodyType;
-	BodyType body;
 	typedef tuple<BODY_RELATIONs...> BodyRelations;
 	typedef tuple<typename BODY_RELATIONs::TrackedSet::const_iterator...> BodyRelationsIteratorType;
 	typedef tuple<const typename BODY_RELATIONs::TrackedGround *...> SliceType;
+
+	template <typename HEAD_ATOM, typename... BODY_ATOMs>
+	struct RuleInstance {
+		typedef Rule<HEAD_RELATION, BODY_RELATIONs...> RuleType;
+		typedef HEAD_ATOM HeadType;
+		HeadType head;
+		typedef tuple<BODY_ATOMs...> BodyType;
+		BodyType body;
+	};
+
+	template <typename HEAD_ATOM, typename... BODY_ATOMs>
+	static RuleInstance<HEAD_ATOM, BODY_ATOMs...> rule(HEAD_ATOM&& head, BODY_ATOMs&&... body) {
+		return RuleInstance<HEAD_ATOM, BODY_ATOMs...>{head, {body...}};
+	}
 };
 
 template <typename RELATION_TYPE>
@@ -436,14 +433,14 @@ ostream & operator<<(ostream &out, const State<RELATIONs...>& state) {
 	return out;
 }
 
-template <typename RULE_TYPE>
-static void unbind(const typename RULE_TYPE::BodyType &atoms)
+template <typename RULE_INSTANCE_TYPE>
+static void unbind(const typename RULE_INSTANCE_TYPE::BodyType &atoms)
 {
-	apply([](auto &&... args) { ((unbind(args)), ...); }, atoms);
+	apply([](auto &&... args) { ((unbind1(args)), ...); }, atoms);
 }
 
-template <size_t I, typename RULE_TYPE>
-static bool bindBodyAtomsToSlice(typename RULE_TYPE::BodyType &atoms,
+template <size_t I, typename RULE_INSTANCE_TYPE, typename RULE_TYPE>
+static bool bindBodyAtomsToSlice(typename RULE_INSTANCE_TYPE::BodyType &atoms,
 				 const typename RULE_TYPE::SliceType &slice)
 {
 	auto factPtr = get<I>(slice);
@@ -454,40 +451,25 @@ static bool bindBodyAtomsToSlice(typename RULE_TYPE::BodyType &atoms,
 		// get the atom
 		auto &atom = get<I>(atoms);
 		// try to bind the atom with the fact
-		success = bind(atom, fact.second);
+		success = bind1(fact.second, atom);
 	}
 	return success;
 }
 
-template <typename RULE_TYPE, size_t... Is>
-static bool bindBodyAtomsToSlice(typename RULE_TYPE::BodyType &atoms,
+template <typename RULE_INSTANCE_TYPE, typename RULE_TYPE, size_t... Is>
+static bool bindBodyAtomsToSlice(typename RULE_INSTANCE_TYPE::BodyType &atoms,
 				 const typename RULE_TYPE::SliceType &slice, index_sequence<Is...>)
 {
-	return ((bindBodyAtomsToSlice<Is, RULE_TYPE>(atoms, slice)) and ...);
+	return ((bindBodyAtomsToSlice<Is, RULE_INSTANCE_TYPE, RULE_TYPE>(atoms, slice)) and ...);
 }
 
-template <typename RULE_TYPE>
-static bool bindBodyAtomsToSlice(typename RULE_TYPE::BodyType &atoms, const typename RULE_TYPE::SliceType &slice)
+template <typename RULE_INSTANCE_TYPE, typename RULE_TYPE>
+static bool bindBodyAtomsToSlice(typename RULE_INSTANCE_TYPE::BodyType &atoms, const typename RULE_TYPE::SliceType &slice)
 {
 	// unbind all the Variables
-	unbind<RULE_TYPE>(atoms);
+	unbind<RULE_INSTANCE_TYPE>(atoms);
 	// for each atom, bind with corresponding relation type in slice
-	return bindBodyAtomsToSlice<RULE_TYPE>(atoms, slice, make_index_sequence<tuple_size<typename RULE_TYPE::BodyType>::value>{});
-}
-
-template <typename VALUE_TYPE>
-void ground(const VariableOrValue<VALUE_TYPE> &s, VALUE_TYPE &v)
-{
-	if (s.isVar())
-	{
-		Variable<VALUE_TYPE> &Variable = *s.getVar();
-		assert(Variable.isBound());
-		v = Variable.value();
-	}
-	else
-	{
-		v = s.getVal();
-	}
+	return bindBodyAtomsToSlice<RULE_INSTANCE_TYPE, RULE_TYPE>(atoms, slice, make_index_sequence<tuple_size<typename RULE_INSTANCE_TYPE::BodyType>::value>{});
 }
 
 template <typename RELATION_TYPE, size_t... Is>
@@ -523,7 +505,7 @@ static bool unseenSlice(size_t iteration, const typename RULE_TYPE::SliceType &s
 
 template <typename RULE_TYPE>
 static bool unseenSlice(size_t iteration, const typename RULE_TYPE::SliceType &slice) {
-	return unseenSlice<RULE_TYPE>(iteration, slice, make_index_sequence<tuple_size<typename RULE_TYPE::BodyType>::value>{});
+	return unseenSlice<RULE_TYPE>(iteration, slice, make_index_sequence<tuple_size<typename RULE_TYPE::BodyRelations>::value>{});
 }
 
 template<size_t I, typename RULE_TYPE, typename STATE_TYPE>
@@ -545,28 +527,28 @@ static bool unseenSlicePossible(const typename STATE_TYPE::StateSizesType& state
 }
 
 template <typename RULE_TYPE, typename STATE_TYPE>
-static RelationSet<typename RULE_TYPE::HeadRelationType> applyRule(
+static RelationSet<typename RULE_TYPE::RuleType::HeadRelationType> applyRule(
 	size_t iteration, 
 	const typename STATE_TYPE::StateSizesType& stateSizeDelta,
 	RULE_TYPE &rule, 
 	const STATE_TYPE &state
 )
 {
-	typedef typename RULE_TYPE::HeadRelationType HeadRelationType;
+	typedef typename RULE_TYPE::RuleType::HeadRelationType HeadRelationType;
 	RelationSet<HeadRelationType> derivedFacts;
 	// does the body of this rule refer to relations with new data?
-	if (unseenSlicePossible<RULE_TYPE, STATE_TYPE>(stateSizeDelta)) {
-		auto it = state.template it<RULE_TYPE>();
+	if (unseenSlicePossible<typename RULE_TYPE::RuleType, STATE_TYPE>(stateSizeDelta)) {
+		auto it = state.template it<typename RULE_TYPE::RuleType>();
 		while (it.hasNext())
 		{
 			auto slice = it.next();
 			// does this slice contain a novel combination of ground atoms?
-			if (unseenSlice<RULE_TYPE>(iteration, slice)) {
+			if (unseenSlice<typename RULE_TYPE::RuleType>(iteration, slice)) {
 				// try to bind rule body with slice
-				if (bindBodyAtomsToSlice<RULE_TYPE>(rule.body, slice))
+				if (bindBodyAtomsToSlice<RULE_TYPE, typename RULE_TYPE::RuleType>(rule.body, slice))
 				{
 					// successful bind, therefore add (grounded) head atom to new state
-					derivedFacts.set.insert({iteration + 1, ground<HeadRelationType>(rule.head)});
+					derivedFacts.set.insert({iteration + 1, ground1<HeadRelationType>(rule.head)});
 				}
 			} 
 		}

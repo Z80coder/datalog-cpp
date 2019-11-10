@@ -40,26 +40,26 @@ struct Variable : optional<T>
 };
 
 template <typename T>
-static void unbind1(Variable<T>* t) {
+static void unbind(Variable<T>* t) {
     t->unbind();
 }
 
 template <typename T>
-static void unbind1(const T& t) {}
+static void unbind(const T& t) {}
 
 template <typename... Ts>
-static void unbind1(const tuple<Ts...> &tuple)
+static void unbind(const tuple<Ts...> &tuple)
 {
-	apply([](auto &&... args) { ((unbind1(args), ...)); }, tuple);
+	apply([](auto &&... args) { ((unbind(args), ...)); }, tuple);
 }
 
 template <typename T>
-static bool bind1(const T& a, const T& b) {
+static bool bind(const T& a, const T& b) {
     return a == b;
 }
 
 template <typename T>
-static bool bind1(const T& a, Variable<T>* b) {
+static bool bind(const T& a, Variable<T>* b) {
     if (b->isBound()) {
         return b->value() == a;
     }
@@ -68,41 +68,41 @@ static bool bind1(const T& a, Variable<T>* b) {
 }
 
 template <typename GROUND_TYPE, typename ... Ts, size_t... Is>
-static bool bind1(const GROUND_TYPE &fact, tuple<Ts...> &atom, index_sequence<Is...>)
+static bool bind(const GROUND_TYPE &fact, tuple<Ts...> &atom, index_sequence<Is...>)
 {
-	return ((bind1(get<Is>(fact), get<Is>(atom))) and ...);
+	return ((bind(get<Is>(fact), get<Is>(atom))) and ...);
 }
 
 template <typename GROUND_TYPE, typename ... Ts>
-static bool bind1(const GROUND_TYPE &fact, tuple<Ts...> &atom)
+static bool bind(const GROUND_TYPE &fact, tuple<Ts...> &atom)
 {
-	return bind1(fact, atom, make_index_sequence<tuple_size<GROUND_TYPE>::value>{});
+	return bind(fact, atom, make_index_sequence<tuple_size<GROUND_TYPE>::value>{});
 }
 
 template <typename T>
-static void ground1(const Variable<T>* s, T &v)
+static void ground(const Variable<T>* s, T &v)
 {
     assert(s->isBound());
     v = s->value();
 }
 
 template <typename T>
-static void ground1(const T &s, T &v)
+static void ground(const T &s, T &v)
 {
     v = s;
 }
 
 template <typename RELATION_TYPE, typename ... Ts, size_t... Is>
-static void ground1(const tuple<Ts...> &atom, typename RELATION_TYPE::Ground &groundAtom, index_sequence<Is...>)
+static void ground(const tuple<Ts...> &atom, typename RELATION_TYPE::Ground &groundAtom, index_sequence<Is...>)
 {
-	((ground1(get<Is>(atom), get<Is>(groundAtom))), ...);
+	((ground(get<Is>(atom), get<Is>(groundAtom))), ...);
 }
 
 template <typename RELATION_TYPE, typename ... Ts>
-static typename RELATION_TYPE::Ground ground1(const tuple<Ts...> &atom)
+static typename RELATION_TYPE::Ground ground(const tuple<Ts...> &atom)
 {
 	typename RELATION_TYPE::Ground groundAtom;
-	ground1<RELATION_TYPE>(atom, groundAtom, make_index_sequence<tuple_size<typename RELATION_TYPE::Ground>::value>{});
+	ground<RELATION_TYPE>(atom, groundAtom, make_index_sequence<tuple_size<typename RELATION_TYPE::Ground>::value>{});
 	return groundAtom;
 }
 
@@ -436,7 +436,7 @@ ostream & operator<<(ostream &out, const State<RELATIONs...>& state) {
 template <typename RULE_INSTANCE_TYPE>
 static void unbind(const typename RULE_INSTANCE_TYPE::BodyType &atoms)
 {
-	apply([](auto &&... args) { ((unbind1(args)), ...); }, atoms);
+	apply([](auto &&... args) { ((unbind(args)), ...); }, atoms);
 }
 
 template <size_t I, typename RULE_INSTANCE_TYPE, typename RULE_TYPE>
@@ -451,7 +451,7 @@ static bool bindBodyAtomsToSlice(typename RULE_INSTANCE_TYPE::BodyType &atoms,
 		// get the atom
 		auto &atom = get<I>(atoms);
 		// try to bind the atom with the fact
-		success = bind1(fact.second, atom);
+		success = bind(fact.second, atom);
 	}
 	return success;
 }
@@ -548,7 +548,7 @@ static RelationSet<typename RULE_TYPE::RuleType::HeadRelationType> applyRule(
 				if (bindBodyAtomsToSlice<RULE_TYPE, typename RULE_TYPE::RuleType>(rule.body, slice))
 				{
 					// successful bind, therefore add (grounded) head atom to new state
-					derivedFacts.set.insert({iteration + 1, ground1<HeadRelationType>(rule.head)});
+					derivedFacts.set.insert({iteration + 1, ground<HeadRelationType>(rule.head)});
 				}
 			} 
 		}

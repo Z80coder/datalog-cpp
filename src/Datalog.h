@@ -145,18 +145,6 @@ static AtomTypeSpecifier<RELATION_TYPE, Us...> atom(Us&&... args) {
 	return AtomTypeSpecifier<RELATION_TYPE, Us...>{atom(args...)};
 }
 
-#if 0
-template <typename RELATION_TYPE, typename ... Us>
-static AtomTypeSpecifier<RELATION_TYPE, Us...> head(Us&&... args) {
-	return atom<RELATION_TYPE, Us...>(args...);
-}
-
-template <typename RELATION_TYPE, typename ... Us>
-static AtomTypeSpecifier<RELATION_TYPE, Us...> clause(Us&&... args) {
-	return atom<RELATION_TYPE, Us...>(args...);
-}
-#endif
-
 template <typename... Ts>
 struct Relation                                                                                                        
 {
@@ -665,7 +653,7 @@ static State<RELATIONs...> fixPoint(RuleSet<RULE_TYPEs...> &ruleSet, const State
 		applyRuleSet(iteration, stateSizeDelta, ruleSet, newState);
 		iteration++;
 	} while (StateType::size(stateSizeDelta) > 0);
-	cout << "fix point in " << iteration + 1 << " iterations" << endl;
+	cout << "fix point in " << iteration << " iterations" << endl;
 	return newState;
 }
 

@@ -74,9 +74,9 @@ bool test2()
         {rod, alan},
         {robin, alan}};
 
-    auto x = new Variable<Name>();
-    auto y = new Variable<Name>();
-    auto z = new Variable<Name>();
+    auto x = var<Name>();
+    auto y = var<Name>();
+    auto z = var<Name>();
 
     // TODO
     //auto inDirectAcademicAncestor = atom<AcademicAncestor>(x, z) <= atom<Adviser>(x, y) && atom<AcademicAncestor>(y, z);
@@ -186,19 +186,81 @@ bool po1()
 }
 #endif
 
+bool test4()
+{
+    // Relations
+    typedef const char* Name;
+    typedef unsigned int Age;
+    enum Gender {male, female, NA};
+    enum Country {england, scotland, wales, france, germany, netherlands, spain};
+    struct Person : Relation<Name, Age, Gender, Country>{};
+
+    // Extensional data
+    Name ian{"Ian"};
+    Name anna{"Anna"};
+    Name albert{"Albert"};
+    Name henry{"Henry"};
+    Name rhiannon{"Rhiannon"};
+    Name jean{"Jean"};
+    Name bas{"Bas"};
+
+    Person::Set people{
+        {ian, 48u, male, scotland},
+        {anna, 25u, female, england},
+        {albert, 25u, male, germany},
+        {henry, 25u, male, england},
+        {rhiannon, 25u, female, wales},
+        {jean, 25u, male, france},
+        {bas, 25u, male, netherlands}
+    };
+
+    auto name = var<Name>();
+    auto age = var<Age>();
+    auto country = var<Country>();
+    auto gender = var<Gender>();
+
+    struct Female : Relation<Name>{}; 
+    auto females = rule(
+        atom<Female>(name),
+        atom<Person>(name, age, female, country)
+    );
+
+#if 0
+    typedef float Height;
+    struct Height : Relation<Name, Height>{}; 
+
+    auto height = rule(
+        atom<Height>(name, height),
+        bind(height, external(f, atom<Person>(name, age, gender, country)))
+    );
+#endif
+
+    // Apply rules
+    State<Person, Female> state{people, {}};
+    RuleSet<decltype(females)> rules{
+        {females}
+    };
+
+    cout << "before = " << state << endl;
+    state = fixPoint(rules, state);
+    cout << "after = " << state << endl;
+
+    return true;
+}
+
 int main()
 {
     bool ok1 = test1();
-    bool ok2= test2();
-#if 1
+    bool ok2 = test2();
     bool ok3 = po1();
-    if (!(ok1 and ok2 and ok3)) {
+    bool ok4 = test4();
+
+    if (!(ok1 and ok2 and ok3 and ok4)) {
         cout << "FAIL" << endl;
         return 1;
     } else {
         cout << "PASSED" << endl;
         return 0;
     }
-#endif
     return 1;
 }

@@ -1,2 +1,2 @@
 # mini-datalog
-naive implementation of datalog in C++
+implementation of datalog (without negation, and semi-naive bottom-up evaluation) in C++

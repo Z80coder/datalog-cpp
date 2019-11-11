@@ -128,10 +128,34 @@ static typename RELATION_TYPE::Ground ground(const tuple<Ts...> &atom)
 	return groundAtom;
 }
 
+template<typename RELATION_TYPE, typename ... Ts>
+struct AtomTypeSpecifier {
+	typedef RELATION_TYPE RelationType;
+	typedef tuple<Ts...> AtomType;
+	AtomType atom;
+};
+
 template <typename ... Ts>
-tuple<Ts...> atom(Ts&&... args) {
+static tuple<Ts...> atom(Ts&&... args) {
     return tuple<Ts...>{args...};
 }
+
+template <typename RELATION_TYPE, typename ... Us>
+static AtomTypeSpecifier<RELATION_TYPE, Us...> atom(Us&&... args) {
+	return AtomTypeSpecifier<RELATION_TYPE, Us...>{atom(args...)};
+}
+
+#if 0
+template <typename RELATION_TYPE, typename ... Us>
+static AtomTypeSpecifier<RELATION_TYPE, Us...> head(Us&&... args) {
+	return atom<RELATION_TYPE, Us...>(args...);
+}
+
+template <typename RELATION_TYPE, typename ... Us>
+static AtomTypeSpecifier<RELATION_TYPE, Us...> clause(Us&&... args) {
+	return atom<RELATION_TYPE, Us...>(args...);
+}
+#endif
 
 template <typename... Ts>
 struct Relation                                                                                                        
@@ -150,16 +174,6 @@ struct Relation
 
 	typedef set<TrackedGround, compare> TrackedSet;
 
-	template <typename ... Us>
-	static tuple<Us...> head(Us&&... args) {
-		return atom(args...);
-	}
-
-	template <typename ... Us>
-	static tuple<Us...> clause(Us&&... args) {
-		return atom(args...);
-	}
-
 };
 
 template <typename HEAD_RELATION, typename... BODY_RELATIONs>
@@ -169,21 +183,27 @@ struct Rule
 	typedef tuple<BODY_RELATIONs...> BodyRelations;
 	typedef tuple<typename BODY_RELATIONs::TrackedSet::const_iterator...> BodyRelationsIteratorType;
 	typedef tuple<const typename BODY_RELATIONs::TrackedGround *...> SliceType;
-
-	template <typename HEAD_ATOM, typename... BODY_ATOMs>
-	struct RuleInstance {
-		typedef Rule<HEAD_RELATION, BODY_RELATIONs...> RuleType;
-		typedef HEAD_ATOM HeadType;
-		HeadType head;
-		typedef tuple<BODY_ATOMs...> BodyType;
-		BodyType body;
-	};
-
-	template <typename HEAD_ATOM, typename... BODY_ATOMs>
-	static RuleInstance<HEAD_ATOM, BODY_ATOMs...> rule(HEAD_ATOM&& head, BODY_ATOMs&&... body) {
-		return RuleInstance<HEAD_ATOM, BODY_ATOMs...>{head, {body...}};
-	}
 };
+
+template <typename HEAD_ATOM_SPECIFIER, typename... BODY_ATOM_SPECIFIERs>
+struct RuleInstance {
+	typedef Rule<typename HEAD_ATOM_SPECIFIER::RelationType, typename BODY_ATOM_SPECIFIERs::RelationType...> RuleType;
+	typedef typename HEAD_ATOM_SPECIFIER::AtomType HeadType;
+	HeadType head;
+	typedef tuple<typename BODY_ATOM_SPECIFIERs::AtomType...> BodyType;
+	BodyType body;
+};
+
+template <typename HEAD_ATOM_SPECIFIER, typename... BODY_ATOM_SPECIFIERs>
+RuleInstance<HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...> rule(
+	const HEAD_ATOM_SPECIFIER& h,
+	const BODY_ATOM_SPECIFIERs&... b
+) {
+	typedef RuleInstance<HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...> RuleInstanceType;
+	typename RuleInstanceType::HeadType head{h.atom};
+	typename RuleInstanceType::BodyType body{b.atom...};
+	return RuleInstanceType{head, body};
+}
 
 template <typename RELATION_TYPE>
 static ostream& operator<<(ostream& out, const typename RELATION_TYPE::Ground& t) {
@@ -444,7 +464,6 @@ private:
 		return convert(tuple, make_index_sequence<tuple_size<TupleType>::value>{});
 	}
 
-
 };
 
 template <typename... RELATIONs>
@@ -473,6 +492,7 @@ static bool bindBodyAtomsToSlice(typename RULE_INSTANCE_TYPE::BodyType &atoms,
 		// get the atom
 		auto &atom = get<I>(atoms);
 		// try to bind the atom with the fact
+		//success = bind(fact.second, atom);
 		success = bind(fact.second, atom);
 	}
 	return success;

@@ -83,7 +83,13 @@ bool test2()
 
     auto directAcademicAncestor = rule(atom<AcademicAncestor>(x, y), atom<Adviser>(x, y));
     auto indirectAcademicAncestor = rule(atom<AcademicAncestor>(x, z), atom<Adviser>(x, y), atom<AcademicAncestor>(y, z));
-    auto query = rule(atom<QueryResult>(x), atom<AcademicAncestor>(robin, x), atom<AcademicAncestor>(x, mistral));
+    auto query = rule(
+        atom<QueryResult>(x),
+        body( 
+            atom<AcademicAncestor>(robin, x), 
+            atom<AcademicAncestor>(x, mistral)
+        )
+    );
 
     // Apply rules
     State<Adviser, AcademicAncestor, QueryResult> state{advisers, {}, {}};
@@ -233,22 +239,21 @@ bool test4()
 
     auto heights = rule(
         atom<Height>(name, height),
-        atom<Person>(name, age, female, country)
+        body(atom<Person>(name, age, female, country))
     );
 
     auto anyPerson = atom<Person>(name, age, gender, country);
+    auto timPerson = atom<Person>(tim, age, gender, country);
 
     auto heightsExternal = rule(
         atom<Height>(name, height),
-        anyPerson
-    ).externals(
-        external<Metres>(
-            height,
-            [](const tuple<const Person::Ground&>& atoms) {
-                return 0.0f;
-            },
-            anyPerson
-        )
+        body(
+            anyPerson,
+            timPerson//,
+            // TODO: allow mixing
+            //atom<Person>(name, 25u, gender, country)
+        ),
+        external(height, [&anyPerson]() { return 0.0f; })
     );
 
 #endif

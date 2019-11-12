@@ -136,6 +136,7 @@ static typename RELATION_TYPE::Ground ground(const tuple<Ts...> &atom)
 template<typename RELATION_TYPE, typename ... Ts>
 struct AtomTypeSpecifier {
 	typedef RELATION_TYPE RelationType;
+	// TODO: why not references?
 	typedef tuple<Ts...> AtomType;
 	AtomType atom;
 };
@@ -189,22 +190,20 @@ struct Externals {
 	tuple<const EXTERNAL_TYPEs&...> externals;
 };
 
+template<typename ... BODY_ATOM_SPECIFIERs>
+struct BodyAtoms {
+	// TODO: why not references?
+	tuple<typename BODY_ATOM_SPECIFIERs::AtomType...> body;
+};
+
 template <typename HEAD_ATOM_SPECIFIER, typename... BODY_ATOM_SPECIFIERs>
 struct RuleInstance {
 	typedef Rule<typename HEAD_ATOM_SPECIFIER::RelationType, typename BODY_ATOM_SPECIFIERs::RelationType...> RuleType;
 	typedef typename HEAD_ATOM_SPECIFIER::AtomType HeadType;
 	HeadType head;
+	// TODO: why not references?
 	typedef tuple<typename BODY_ATOM_SPECIFIERs::AtomType...> BodyType;
 	BodyType body;
-
-	template <typename ... EXTERNAL_TYPEs>
-	ExternalRuleInstance<Externals<EXTERNAL_TYPEs...>, HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...> externals(
-		const EXTERNAL_TYPEs&... externals
-	) {
-		typedef ExternalRuleInstance<Externals<EXTERNAL_TYPEs...>, HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...> RuleInstanceType;
-		return RuleInstanceType{head, body, Externals<EXTERNAL_TYPEs...>{externals...}};
-	}
-
 };
 
 template <typename EXTERNALS_TYPE, typename HEAD_ATOM_SPECIFIER, typename... BODY_ATOM_SPECIFIERs>
@@ -223,26 +222,51 @@ static RuleInstance<HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...> rule(
 	return RuleInstanceType{head, body};
 }
 
+template <typename HEAD_ATOM_SPECIFIER, typename... BODY_ATOM_SPECIFIERs>
+static RuleInstance<HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...> rule(
+	const HEAD_ATOM_SPECIFIER& h,
+	const BodyAtoms<BODY_ATOM_SPECIFIERs...>& b
+) {
+	typedef RuleInstance<HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...> RuleInstanceType;
+	typename RuleInstanceType::HeadType head{h.atom};
+	return RuleInstanceType{head, b.body};
+}
+
 // Rules with external functions
 
-template<typename T, typename ... ATOM_TYPE_SPECIFIERs>
+template<typename T>
 struct ExternalFunction {
 	Variable<T>& bindVariable;
-	typedef tuple<const ATOM_TYPE_SPECIFIERs&...> AtomsTupleType;
-	AtomsTupleType boundAtoms;
-	typedef tuple<const typename ATOM_TYPE_SPECIFIERs::RelationType::Ground&...> ArgsType;
-	function<T(const ArgsType&)> externalFunction;
+	typedef function<T()> ExternalFunctionType;
+	ExternalFunctionType externalFunction;
 };
 
-template<typename T, typename ... ATOM_TYPE_SPECIFIERs>
-static ExternalFunction<T, ATOM_TYPE_SPECIFIERs...> external(
+template<typename T>
+static ExternalFunction<T> external(
 	unique_ptr<Variable<T>>& bindVariable,
-	function<T(const typename ExternalFunction<T, ATOM_TYPE_SPECIFIERs...>::ArgsType&)> externalFunction,
-	const ATOM_TYPE_SPECIFIERs&... boundAtoms
+	typename ExternalFunction<T>::ExternalFunctionType externalFunction) {
+	return ExternalFunction<T> {*bindVariable, externalFunction};
+}
+
+template<typename ... BODY_ATOM_SPECIFIERs>
+static BodyAtoms<BODY_ATOM_SPECIFIERs...> body(BODY_ATOM_SPECIFIERs&&... bodyAtoms) {
+	return BodyAtoms<BODY_ATOM_SPECIFIERs...>{{bodyAtoms.atom...}};
+}
+
+template<typename ... BODY_ATOM_SPECIFIERs>
+static BodyAtoms<BODY_ATOM_SPECIFIERs...> body(BODY_ATOM_SPECIFIERs&... bodyAtoms) {
+	return BodyAtoms<BODY_ATOM_SPECIFIERs...>{{bodyAtoms.atom...}};
+}
+
+template <typename HEAD_ATOM_SPECIFIER, typename... BODY_ATOM_SPECIFIERs, typename... EXTERNAL_TYPEs>
+static ExternalRuleInstance<Externals<EXTERNAL_TYPEs...>, HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...> rule(
+	const HEAD_ATOM_SPECIFIER& h,
+	const BodyAtoms<BODY_ATOM_SPECIFIERs...>& b,
+	const EXTERNAL_TYPEs&... externals
 ) {
-	return ExternalFunction<T, ATOM_TYPE_SPECIFIERs...> {
-		*bindVariable, {boundAtoms...}, externalFunction
-	};
+	typedef ExternalRuleInstance<Externals<EXTERNAL_TYPEs...>, HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...> RuleInstanceType;
+	typename RuleInstanceType::HeadType head{h.atom};
+	return RuleInstanceType{head, b.body, Externals<EXTERNAL_TYPEs...>{externals...}};
 }
 
 template <typename RELATION_TYPE>

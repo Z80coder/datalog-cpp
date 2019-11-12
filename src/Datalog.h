@@ -6,6 +6,7 @@
 #include <numeric>
 #include <optional>
 #include <limits>
+#include <functional>
 #include <cassert>
 #include <iostream>
 #include <memory>
@@ -98,7 +99,11 @@ static bool bind(const GROUND_TYPE &fact, tuple<Ts...> &atom)
 template <typename T>
 static void ground(const Variable<T>* s, T &v)
 {
-    assert(s->isBound());
+	// TODO: restrict to debug builds only
+	if (!s->isBound()) {
+		cerr << "ERROR: unbound variable (" << s << ")" << endl;
+		exit(EXIT_FAILURE);
+	}
     v = s->value();
 }
 
@@ -136,13 +141,13 @@ struct AtomTypeSpecifier {
 };
 
 template <typename ... Ts>
-static tuple<Ts...> atom(Ts&&... args) {
+static tuple<Ts...> atomImpl(Ts&&... args) {
     return tuple<Ts...>{args...};
 }
 
 template <typename RELATION_TYPE, typename ... Us>
 static AtomTypeSpecifier<RELATION_TYPE, Us...> atom(Us&&... args) {
-	return AtomTypeSpecifier<RELATION_TYPE, Us...>{atom(args...)};
+	return AtomTypeSpecifier<RELATION_TYPE, Us...>{atomImpl(args...)};
 }
 
 template <typename... Ts>
@@ -174,16 +179,41 @@ struct Rule
 };
 
 template <typename HEAD_ATOM_SPECIFIER, typename... BODY_ATOM_SPECIFIERs>
+struct RuleInstance;
+
+template <typename EXTERNALS_TYPE, typename HEAD_ATOM_SPECIFIER, typename... BODY_ATOM_SPECIFIERs>
+struct ExternalRuleInstance;
+
+template<typename ... EXTERNAL_TYPEs>
+struct Externals {
+	tuple<const EXTERNAL_TYPEs&...> externals;
+};
+
+template <typename HEAD_ATOM_SPECIFIER, typename... BODY_ATOM_SPECIFIERs>
 struct RuleInstance {
 	typedef Rule<typename HEAD_ATOM_SPECIFIER::RelationType, typename BODY_ATOM_SPECIFIERs::RelationType...> RuleType;
 	typedef typename HEAD_ATOM_SPECIFIER::AtomType HeadType;
 	HeadType head;
 	typedef tuple<typename BODY_ATOM_SPECIFIERs::AtomType...> BodyType;
 	BodyType body;
+
+	template <typename ... EXTERNAL_TYPEs>
+	ExternalRuleInstance<Externals<EXTERNAL_TYPEs...>, HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...> externals(
+		const EXTERNAL_TYPEs&... externals
+	) {
+		typedef ExternalRuleInstance<Externals<EXTERNAL_TYPEs...>, HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...> RuleInstanceType;
+		return RuleInstanceType{head, body, Externals<EXTERNAL_TYPEs...>{externals...}};
+	}
+
+};
+
+template <typename EXTERNALS_TYPE, typename HEAD_ATOM_SPECIFIER, typename... BODY_ATOM_SPECIFIERs>
+struct ExternalRuleInstance : RuleInstance<HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...> {
+	const EXTERNALS_TYPE& externals;
 };
 
 template <typename HEAD_ATOM_SPECIFIER, typename... BODY_ATOM_SPECIFIERs>
-RuleInstance<HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...> rule(
+static RuleInstance<HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...> rule(
 	const HEAD_ATOM_SPECIFIER& h,
 	const BODY_ATOM_SPECIFIERs&... b
 ) {
@@ -191,6 +221,28 @@ RuleInstance<HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...> rule(
 	typename RuleInstanceType::HeadType head{h.atom};
 	typename RuleInstanceType::BodyType body{b.atom...};
 	return RuleInstanceType{head, body};
+}
+
+// Rules with external functions
+
+template<typename T, typename ... ATOM_TYPE_SPECIFIERs>
+struct ExternalFunction {
+	Variable<T>& bindVariable;
+	typedef tuple<const ATOM_TYPE_SPECIFIERs&...> AtomsTupleType;
+	AtomsTupleType boundAtoms;
+	typedef tuple<const typename ATOM_TYPE_SPECIFIERs::RelationType::Ground&...> ArgsType;
+	function<T(const ArgsType&)> externalFunction;
+};
+
+template<typename T, typename ... ATOM_TYPE_SPECIFIERs>
+static ExternalFunction<T, ATOM_TYPE_SPECIFIERs...> external(
+	unique_ptr<Variable<T>>& bindVariable,
+	function<T(const typename ExternalFunction<T, ATOM_TYPE_SPECIFIERs...>::ArgsType&)> externalFunction,
+	const ATOM_TYPE_SPECIFIERs&... boundAtoms
+) {
+	return ExternalFunction<T, ATOM_TYPE_SPECIFIERs...> {
+		*bindVariable, {boundAtoms...}, externalFunction
+	};
 }
 
 template <typename RELATION_TYPE>
@@ -480,7 +532,6 @@ static bool bindBodyAtomsToSlice(typename RULE_INSTANCE_TYPE::BodyType &atoms,
 		// get the atom
 		auto &atom = get<I>(atoms);
 		// try to bind the atom with the fact
-		//success = bind(fact.second, atom);
 		success = bind(fact.second, atom);
 	}
 	return success;

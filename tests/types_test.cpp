@@ -196,28 +196,28 @@ bool test4()
     struct Person : Relation<Name, Age, Gender, Country>{};
 
     // Extensional data
-    Name ian{"Ian"};
-    Name anna{"Anna"};
-    Name albert{"Albert"};
-    Name henry{"Henry"};
-    Name rhiannon{"Rhiannon"};
-    Name jean{"Jean"};
-    Name bas{"Bas"};
+    Name sam{"Sam"};
+    Name tim{"Tim"};
+    Name rod{"Rod"};
+    Name bob{"Bob"};
+    Name jill{"Jill"};
+    Name jane{"Jane"};
+    Name sally{"Sally"};
 
     Person::Set people{
-        {ian, 48u, male, scotland},
-        {anna, 25u, female, england},
-        {albert, 25u, male, germany},
-        {henry, 25u, male, england},
-        {rhiannon, 25u, female, wales},
-        {jean, 25u, male, france},
-        {bas, 25u, male, netherlands}
+        {sam, 48u, male, scotland},
+        {tim, 25u, male, england},
+        {rod, 38u, male, germany},
+        {bob, 18u, male, england},
+        {jill, 56u, female, wales},
+        {jane, 32u, female, france},
+        {sally, 40u, female, netherlands}
     };
 
     auto name = var<Name>();
     auto age = var<Age>();
-    auto country = var<Country>();
     auto gender = var<Gender>();
+    auto country = var<Country>();
 
     struct Female : Relation<Name>{}; 
     auto females = rule(
@@ -225,20 +225,38 @@ bool test4()
         atom<Person>(name, age, female, country)
     );
 
-#if 0
-    typedef float Height;
-    struct Height : Relation<Name, Height>{}; 
+#if 1
+    typedef float Metres;
+    struct Height : Relation<Name, Metres>{}; 
 
-    auto height = rule(
+    auto height = var<Metres>();
+
+    auto heights = rule(
         atom<Height>(name, height),
-        bind(height, external(f, atom<Person>(name, age, gender, country)))
+        atom<Person>(name, age, female, country)
     );
+
+    auto anyPerson = atom<Person>(name, age, gender, country);
+
+    auto heightsExternal = rule(
+        atom<Height>(name, height),
+        anyPerson
+    ).externals(
+        external<Metres>(
+            height,
+            [](const tuple<const Person::Ground&>& atoms) {
+                return 0.0f;
+            },
+            anyPerson
+        )
+    );
+
 #endif
 
     // Apply rules
-    State<Person, Female> state{people, {}};
-    RuleSet<decltype(females)> rules{
-        {females}
+    State<Person, Female, Height> state{people, {}, {}};
+    RuleSet<decltype(females), decltype(heights)> rules{
+        {females, heights}
     };
 
     cout << "before = " << state << endl;

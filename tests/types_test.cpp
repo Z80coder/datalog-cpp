@@ -267,7 +267,7 @@ bool test4()
     auto externalHeights = rule(
         atom<Height>(name, height),
         body(atom<Person>(name, age, female, country)),
-        external(height, [&age]() { return val(age) * 3.0f; } )
+        lambda(height, [&age]() { return val(age) * 3.0f; } )
     );
 #endif
 

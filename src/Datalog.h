@@ -252,7 +252,7 @@ struct ExternalFunction {
 };
 
 template<typename T>
-static ExternalFunction<T> external(
+static ExternalFunction<T> lambda(
 	unique_ptr<Variable<T>>& bindVariable,
 	typename ExternalFunction<T>::ExternalFunctionType externalFunction) {
 	return ExternalFunction<T> {*bindVariable, externalFunction};

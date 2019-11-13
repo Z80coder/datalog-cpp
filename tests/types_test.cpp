@@ -39,7 +39,7 @@ bool test1()
     State<Thing, Mortal> state{things, {}};
 
     // Apply rule
-    RuleSet<decltype(rule1)> rules{rule1};
+    auto rules = ruleset(rule1);
 
     cout << "before = " << state << endl;
     state = fixPoint(rules, state);
@@ -93,10 +93,8 @@ bool test2()
     );
 
     // Apply rules
+    auto rules = ruleset(directAcademicAncestor, indirectAcademicAncestor, query);
     State<Adviser, AcademicAncestor, QueryResult> state{advisers, {}, {}};
-    RuleSet<decltype(directAcademicAncestor), decltype(indirectAcademicAncestor), decltype(query)> rules{
-        {directAcademicAncestor, indirectAcademicAncestor, query}
-    };
 
     cout << "before = " << state << endl;
     state = fixPoint(rules, state);
@@ -177,10 +175,8 @@ bool po1()
     //  A(19, i) :- Check(a, b, c, d, e, f), In(a, b, c, d, e, f, i).
     auto rule19 = rule(atom<A>(19u, i), atom<Check>(a, b, c, d, e, f), atom<In>(a, b, c, d, e, f, i));
 
-    RuleSet<decltype(rule1), decltype(rule2), decltype(rule3), decltype(rule4), decltype(rule5), decltype(rule6), decltype(rule7), decltype(rule8), decltype(rule9), decltype(rule10), decltype(rule11), decltype(rule12), decltype(rule13), decltype(rule14), decltype(rule15), decltype(rule16), decltype(rule17), decltype(rule18), decltype(rule19)>
-    rules{
-        {rule1, rule2, rule3, rule4, rule5, rule6, rule7, rule8, rule9, rule10, rule11, rule12, rule13, rule14, rule15, rule16, rule17, rule18, rule19}
-    };
+    auto rules = ruleset(rule1, rule2, rule3, rule4, rule5, rule6, rule7, rule8, rule9, rule10, rule11, rule12, rule13,
+        rule14, rule15, rule16, rule17, rule18, rule19);
 
     //cout << "before = " << state << endl;
     state = fixPoint(rules, state);
@@ -292,10 +288,8 @@ bool test4()
     );
 
     // Apply rules
+    auto rules = ruleset(females, heights, externalHeights);
     State<Person, Female, Height> state{people, {}, {}};
-    RuleSet<decltype(females), decltype(heights), decltype(externalHeights)> rules{
-        {females, heights, externalHeights}
-    };
 
     cout << "before = " << state << endl;
     state = fixPoint(rules, state);

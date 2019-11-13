@@ -231,37 +231,50 @@ bool test4()
         atom<Person>(name, age, female, country)
     );
 
-#if 1
     typedef float Metres;
     struct Height : Relation<Name, Metres>{}; 
 
     auto height = var<Metres>();
 
     auto heights = rule(
-        atom<Height>(name, height),
-        body(atom<Person>(name, age, female, country))
+        atom<Height>(name, 1.0f),
+        body(
+            atom<Person>(name, age, gender, country)
+        )
     );
 
+#if 0
+    // Use this pattern to get at values too
     auto anyPerson = atom<Person>(name, age, gender, country);
-    auto timPerson = atom<Person>(tim, age, gender, country);
 
-    auto heightsExternal = rule(
+    auto externalHeights = rule(
         atom<Height>(name, height),
         body(
-            anyPerson,
-            timPerson//,
-            // TODO: allow mixing
-            //atom<Person>(name, 25u, gender, country)
+            atom<Person>(name, age, gender, country)
         ),
-        external(height, [&anyPerson]() { return 0.0f; })
+        external(
+            height, 
+            [&anyPerson]() { 
+                cout << "hello world!" << endl;
+                auto person = ground<Person>(anyPerson);
+                auto age = get<Age>(person);
+                return age * 3.0f; 
+            }
+        )
     );
-
+#else
+    // Use this pattern to get at variables (values can't be got directly)
+    auto externalHeights = rule(
+        atom<Height>(name, height),
+        body(atom<Person>(name, age, female, country)),
+        external(height, [&age]() { return val(age) * 3.0f; } )
+    );
 #endif
 
     // Apply rules
     State<Person, Female, Height> state{people, {}, {}};
-    RuleSet<decltype(females), decltype(heights)> rules{
-        {females, heights}
+    RuleSet<decltype(females), decltype(heights), decltype(externalHeights)> rules{
+        {females, heights, externalHeights}
     };
 
     cout << "before = " << state << endl;

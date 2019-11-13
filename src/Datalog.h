@@ -42,6 +42,11 @@ struct Variable : optional<T>
 };
 
 template<typename T>
+T val(unique_ptr<Variable<T>>& var) {
+	return var->value();
+}
+
+template<typename T>
 unique_ptr<Variable<T>> var() {
 	return make_unique<Variable<T>>();
 }
@@ -99,11 +104,7 @@ static bool bind(const GROUND_TYPE &fact, tuple<Ts...> &atom)
 template <typename T>
 static void ground(const Variable<T>* s, T &v)
 {
-	// TODO: restrict to debug builds only
-	if (!s->isBound()) {
-		cerr << "ERROR: unbound variable (" << s << ")" << endl;
-		exit(EXIT_FAILURE);
-	}
+	// N.B. bad optional access is thrown if th variable isn't bound
     v = s->value();
 }
 
@@ -179,37 +180,46 @@ struct Rule
 	typedef tuple<const typename BODY_RELATIONs::TrackedGround *...> SliceType;
 };
 
-template <typename HEAD_ATOM_SPECIFIER, typename... BODY_ATOM_SPECIFIERs>
-struct RuleInstance;
-
-template <typename EXTERNALS_TYPE, typename HEAD_ATOM_SPECIFIER, typename... BODY_ATOM_SPECIFIERs>
-struct ExternalRuleInstance;
-
 template<typename ... EXTERNAL_TYPEs>
 struct Externals {
-	tuple<const EXTERNAL_TYPEs&...> externals;
+	// N.B. We need to store the ExternalFunctions
+	//typedef tuple<const EXTERNAL_TYPEs&...> ExternalsTupleType;
+	typedef tuple<const EXTERNAL_TYPEs...> ExternalsTupleType;
+	ExternalsTupleType externals;
 };
 
 template<typename ... BODY_ATOM_SPECIFIERs>
 struct BodyAtoms {
-	// TODO: why not references?
 	tuple<typename BODY_ATOM_SPECIFIERs::AtomType...> body;
 };
 
+// Note that RuleInstances store atoms (and therefore atoms specified during construction are copied).
+// This is OK since all copies of atoms still refer to the same shared variables
 template <typename HEAD_ATOM_SPECIFIER, typename... BODY_ATOM_SPECIFIERs>
 struct RuleInstance {
 	typedef Rule<typename HEAD_ATOM_SPECIFIER::RelationType, typename BODY_ATOM_SPECIFIERs::RelationType...> RuleType;
 	typedef typename HEAD_ATOM_SPECIFIER::AtomType HeadType;
-	HeadType head;
-	// TODO: why not references?
+	const HeadType head;
 	typedef tuple<typename BODY_ATOM_SPECIFIERs::AtomType...> BodyType;
 	BodyType body;
 };
 
+#if 0
 template <typename EXTERNALS_TYPE, typename HEAD_ATOM_SPECIFIER, typename... BODY_ATOM_SPECIFIERs>
 struct ExternalRuleInstance : RuleInstance<HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...> {
 	const EXTERNALS_TYPE& externals;
 };
+#else
+template <typename EXTERNALS_TYPE, typename HEAD_ATOM_SPECIFIER, typename... BODY_ATOM_SPECIFIERs>
+struct ExternalRuleInstance {
+	typedef Rule<typename HEAD_ATOM_SPECIFIER::RelationType, typename BODY_ATOM_SPECIFIERs::RelationType...> RuleType;
+	typedef typename HEAD_ATOM_SPECIFIER::AtomType HeadType;
+	const HeadType head;
+	typedef tuple<typename BODY_ATOM_SPECIFIERs::AtomType...> BodyType;
+	BodyType body;
+	const EXTERNALS_TYPE& externals;
+};
+#endif
 
 template <typename HEAD_ATOM_SPECIFIER, typename... BODY_ATOM_SPECIFIERs>
 static RuleInstance<HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...> rule(
@@ -248,6 +258,7 @@ static ExternalFunction<T> external(
 	return ExternalFunction<T> {*bindVariable, externalFunction};
 }
 
+#if 0
 template<typename ... BODY_ATOM_SPECIFIERs>
 static BodyAtoms<BODY_ATOM_SPECIFIERs...> body(BODY_ATOM_SPECIFIERs&&... bodyAtoms) {
 	return BodyAtoms<BODY_ATOM_SPECIFIERs...>{{bodyAtoms.atom...}};
@@ -257,6 +268,12 @@ template<typename ... BODY_ATOM_SPECIFIERs>
 static BodyAtoms<BODY_ATOM_SPECIFIERs...> body(BODY_ATOM_SPECIFIERs&... bodyAtoms) {
 	return BodyAtoms<BODY_ATOM_SPECIFIERs...>{{bodyAtoms.atom...}};
 }
+#else
+template<typename ... BODY_ATOM_SPECIFIERs>
+static BodyAtoms<BODY_ATOM_SPECIFIERs...> body(BODY_ATOM_SPECIFIERs... bodyAtoms) {
+	return BodyAtoms<BODY_ATOM_SPECIFIERs...>{{bodyAtoms.atom...}};
+}
+#endif
 
 template <typename HEAD_ATOM_SPECIFIER, typename... BODY_ATOM_SPECIFIERs, typename... EXTERNAL_TYPEs>
 static ExternalRuleInstance<Externals<EXTERNAL_TYPEs...>, HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...> rule(
@@ -571,8 +588,6 @@ static bool bindBodyAtomsToSlice(typename RULE_INSTANCE_TYPE::BodyType &atoms,
 template <typename RULE_INSTANCE_TYPE, typename RULE_TYPE>
 static bool bindBodyAtomsToSlice(typename RULE_INSTANCE_TYPE::BodyType &atoms, const typename RULE_TYPE::SliceType &slice)
 {
-	// unbind all the Variables
-	unbind<RULE_INSTANCE_TYPE>(atoms);
 	// for each atom, bind with corresponding relation type in slice
 	return bindBodyAtomsToSlice<RULE_INSTANCE_TYPE, RULE_TYPE>(atoms, slice, make_index_sequence<tuple_size<typename RULE_INSTANCE_TYPE::BodyType>::value>{});
 }
@@ -589,6 +604,12 @@ static typename RELATION_TYPE::Ground ground(const typename RELATION_TYPE::Atom 
 	typename RELATION_TYPE::Ground groundAtom;
 	ground<RELATION_TYPE>(atom, groundAtom, make_index_sequence<tuple_size<typename RELATION_TYPE::Atom>::value>{});
 	return groundAtom;
+}
+
+template <typename RELATION_TYPE, typename ... Ts>
+static typename RELATION_TYPE::Ground ground(const AtomTypeSpecifier<RELATION_TYPE, Ts...> &atomTypeSpecifier)
+{
+	return ground<RELATION_TYPE>(atomTypeSpecifier.atom);
 }
 
 template <size_t I, typename RULE_TYPE>
@@ -632,6 +653,50 @@ static bool unseenSlicePossible(const typename STATE_TYPE::StateSizesType& state
 	return unseenSlicePossible<RULE_TYPE, STATE_TYPE>(stateSizeDelta, indexSequence);
 }
 
+template <typename HEAD_ATOM_SPECIFIER, typename... BODY_ATOM_SPECIFIERs>
+static bool bindExternals(const RuleInstance<HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...>& rule) {
+	return true;
+}
+
+template<size_t I, typename... Ts, typename HEAD_ATOM_SPECIFIER, typename... BODY_ATOM_SPECIFIERs>
+static bool bindExternal(const ExternalRuleInstance<Externals<Ts...>, HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...>& rule) {
+	auto& external = get<I>(rule.externals.externals);
+	auto value = external.externalFunction();
+	//cout << "external function returned " << value << endl;
+	auto& bindVariable = external.bindVariable;
+	return datalog::bind(value, &bindVariable);
+}
+
+template <typename... Ts, typename HEAD_ATOM_SPECIFIER, typename... BODY_ATOM_SPECIFIERs, size_t ... Is>
+static bool bindExternals(const ExternalRuleInstance<Externals<Ts...>, HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...>& rule, index_sequence<Is...>) {
+	return ((bindExternal<Is>(rule)) and ...);
+}
+
+template <typename... Ts, typename HEAD_ATOM_SPECIFIER, typename... BODY_ATOM_SPECIFIERs>
+static bool bindExternals(const ExternalRuleInstance<Externals<Ts...>, HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...>& rule) {
+	return bindExternals(rule, make_index_sequence<tuple_size<typename Externals<Ts...>::ExternalsTupleType>::value>{});
+}
+
+template <typename HEAD_ATOM_SPECIFIER, typename... BODY_ATOM_SPECIFIERs>
+static void unbindExternals(const RuleInstance<HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...>& rule) {}
+
+template<size_t I, typename... Ts, typename HEAD_ATOM_SPECIFIER, typename... BODY_ATOM_SPECIFIERs>
+static void unbindExternal(const ExternalRuleInstance<Externals<Ts...>, HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...>& rule) {
+	auto& external = get<I>(rule.externals.externals);
+	auto& bindVariable = external.bindVariable;
+	bindVariable.unbind();
+}
+
+template <typename... Ts, typename HEAD_ATOM_SPECIFIER, typename... BODY_ATOM_SPECIFIERs, size_t ... Is>
+static void unbindExternals(const ExternalRuleInstance<Externals<Ts...>, HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...>& rule, index_sequence<Is...>) {
+	return ((unbindExternal<Is>(rule)), ...);
+}
+
+template <typename... Ts, typename HEAD_ATOM_SPECIFIER, typename... BODY_ATOM_SPECIFIERs>
+static void unbindExternals(const ExternalRuleInstance<Externals<Ts...>, HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...>& rule) {
+	unbindExternals(rule, make_index_sequence<tuple_size<typename Externals<Ts...>::ExternalsTupleType>::value>{});
+}
+
 template <typename RULE_TYPE, typename STATE_TYPE>
 static RelationSet<typename RULE_TYPE::RuleType::HeadRelationType> applyRule(
 	size_t iteration, 
@@ -651,11 +716,17 @@ static RelationSet<typename RULE_TYPE::RuleType::HeadRelationType> applyRule(
 			auto slice = it.next();
 			// does this slice contain an unseen combination of ground atoms?
 			if (unseenSlice<typename RULE_TYPE::RuleType>(iteration, slice)) {
+				// unbind all the Variables
+				unbind<RULE_TYPE>(rule.body);
+				unbindExternals(rule);
 				// try to bind rule body with slice
 				if (bindBodyAtomsToSlice<RULE_TYPE, typename RULE_TYPE::RuleType>(rule.body, slice))
 				{
-					// successful bind, therefore add (grounded) head atom to new state
-					derivedFacts.set.insert({iteration + 1, ground<HeadRelationType>(rule.head)});
+					// run any externals
+					if (bindExternals(rule)) {
+						// successful bind, therefore add (grounded) head atom to new state
+						derivedFacts.set.insert({iteration + 1, ground<HeadRelationType>(rule.head)});
+					}
 				}
 			} 
 		}

@@ -33,8 +33,8 @@ bool test1()
         {thor, god}};
 
     // Rule
-    Variable<Name> x;
-    auto rule1 = rule(atom<Mortal>(&x), atom<Thing>(&x, person));
+    auto x = var<Name>();
+    auto rule1 = rule(atom<Mortal>(x), atom<Thing>(x, person));
 
     State<Thing, Mortal> state{things, {}};
 
@@ -44,6 +44,8 @@ bool test1()
     cout << "before = " << state << endl;
     state = fixPoint(rules, state);
     cout << "after = " << state << endl;
+
+    deleteVar(x);
 
     return true;
 }

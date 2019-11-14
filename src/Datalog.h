@@ -40,6 +40,18 @@ struct Variable : optional<T>
 	}
 };
 
+// TODO: use auto more for return type of functions
+
+template<typename T>
+Variable<T>* var() {
+	return new Variable<T>();
+}
+
+template<typename T>
+void deleteVar(Variable<T>* v) {
+	delete v;
+}
+
 template <typename T>
 static void unbind(const T& t) {}
 

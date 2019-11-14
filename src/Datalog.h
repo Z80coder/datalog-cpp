@@ -264,7 +264,7 @@ static ostream & operator<<(ostream &out, const RelationSet<RELATION_TYPE>& rela
 {
 	out << "\"" << typeid(relationSet).name() << "\"" << endl;
 	for (const auto& tuple : relationSet.set) {
-		operator<< <RELATION_TYPE>(out, tuple.second);
+		datalog::operator<< <RELATION_TYPE>(out, tuple.second);
 		out << endl;
 	}
 	return out;

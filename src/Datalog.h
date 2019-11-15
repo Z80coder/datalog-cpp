@@ -191,7 +191,7 @@ struct ExternalRuleInstance {
 	const HeadType head;
 	typedef tuple<typename BODY_ATOM_SPECIFIERs::AtomType...> BodyType;
 	BodyType body;
-	const EXTERNALS_TYPE& externals;
+	const EXTERNALS_TYPE externals;
 };
 
 template <typename HEAD_ATOM_SPECIFIER, typename... BODY_ATOM_SPECIFIERs>

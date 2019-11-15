@@ -727,11 +727,11 @@ static void assign(RelationSet<RELATION_TYPE>&& facts, State<RELATIONs...> &stat
 
 template <typename ... RULE_TYPEs>
 struct RuleSet {
-	tuple<RULE_TYPEs&...> rules;
+	tuple<RULE_TYPEs...> rules;
 };
 
 template <typename ... RULE_TYPEs>
-RuleSet<RULE_TYPEs...> ruleset(RULE_TYPEs&... r) {
+RuleSet<RULE_TYPEs...> ruleset(RULE_TYPEs&&... r) {
 	return RuleSet<RULE_TYPEs...>{{r...}};
 }
 

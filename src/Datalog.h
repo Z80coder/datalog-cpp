@@ -61,6 +61,11 @@ void deleteVar(Variable<T>* v) {
 }
 
 template <typename T>
+static void unbind(Variable<T>* t) {
+    t->unbind();
+}
+
+template <typename T>
 static void unbind(const T& t) {}
 
 template <typename T>
@@ -163,6 +168,7 @@ struct Relation
 			return lhs.second < rhs.second;
 		}
 	};
+
 	typedef set<TrackedGround, compare> TrackedSet;
 #else
 	// unordered set seems faster than set

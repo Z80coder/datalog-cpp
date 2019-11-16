@@ -39,11 +39,14 @@ bool test1()
     State<Thing, Mortal> state{things, {}};
 
     // Apply rule
-    RuleSet<decltype(rule1)> rules{rule1};
+    auto rules = ruleset(rule1);
 
     cout << "before = " << state << endl;
     state = fixPoint(rules, state);
     cout << "after = " << state << endl;
+
+    deleteVar(x);
+
     return true;
 }
 
@@ -74,9 +77,9 @@ bool test2()
         {rod, alan},
         {robin, alan}};
 
-    auto x = var<Name>();
-    auto y = var<Name>();
-    auto z = var<Name>();
+    auto x = new Variable<Name>();
+    auto y = new Variable<Name>();
+    auto z = new Variable<Name>();
 
     // TODO
     //auto inDirectAcademicAncestor = atom<AcademicAncestor>(x, z) <= atom<Adviser>(x, y) && atom<AcademicAncestor>(y, z);
@@ -92,14 +95,16 @@ bool test2()
     );
 
     // Apply rules
+    auto rules = ruleset(directAcademicAncestor, indirectAcademicAncestor, query);
     State<Adviser, AcademicAncestor, QueryResult> state{advisers, {}, {}};
-    RuleSet<decltype(directAcademicAncestor), decltype(indirectAcademicAncestor), decltype(query)> rules{
-        {directAcademicAncestor, indirectAcademicAncestor, query}
-    };
 
     cout << "before = " << state << endl;
     state = fixPoint(rules, state);
     cout << "after = " << state << endl;
+
+    delete x;
+    delete y;
+    delete z;
 
     return true;
 }
@@ -117,21 +122,21 @@ bool po1()
 
     State<Check, In, A> state{check, in, {}};
 
-    auto a = var<Number>();
-    auto b = var<Number>();
-    auto c = var<Number>();
-    auto d = var<Number>();
-    auto e = var<Number>();
-    auto f = var<Number>();
-    auto i = var<Number>();
-    auto anon1 = var<Number>();
-    auto anon2 = var<Number>();
-    auto anon3 = var<Number>();
-    auto anon4 = var<Number>();
-    auto anon5 = var<Number>();
-    auto anon6 = var<Number>();
-    auto anon7 = var<Number>();
-    auto anon8 = var<Number>();
+    auto a = new Variable<Number>();
+    auto b = new Variable<Number>();
+    auto c = new Variable<Number>();
+    auto d = new Variable<Number>();
+    auto e = new Variable<Number>();
+    auto f = new Variable<Number>();
+    auto i = new Variable<Number>();
+    auto anon1 = new Variable<Number>();
+    auto anon2 = new Variable<Number>();
+    auto anon3 = new Variable<Number>();
+    auto anon4 = new Variable<Number>();
+    auto anon5 = new Variable<Number>();
+    auto anon6 = new Variable<Number>();
+    auto anon7 = new Variable<Number>();
+    auto anon8 = new Variable<Number>();
     
     // A(1,i) :- Check(_, b, c, d, e, f), In(_, b, c, d, e, f, i).
     auto rule1 = rule(atom<A>(1u, i), atom<Check>(anon1, b, c, d, e, f), atom<In>(anon2, b, c, d, e, f, i));
@@ -172,10 +177,8 @@ bool po1()
     //  A(19, i) :- Check(a, b, c, d, e, f), In(a, b, c, d, e, f, i).
     auto rule19 = rule(atom<A>(19u, i), atom<Check>(a, b, c, d, e, f), atom<In>(a, b, c, d, e, f, i));
 
-    RuleSet<decltype(rule1), decltype(rule2), decltype(rule3), decltype(rule4), decltype(rule5), decltype(rule6), decltype(rule7), decltype(rule8), decltype(rule9), decltype(rule10), decltype(rule11), decltype(rule12), decltype(rule13), decltype(rule14), decltype(rule15), decltype(rule16), decltype(rule17), decltype(rule18), decltype(rule19)>
-    rules{
-        {rule1, rule2, rule3, rule4, rule5, rule6, rule7, rule8, rule9, rule10, rule11, rule12, rule13, rule14, rule15, rule16, rule17, rule18, rule19}
-    };
+    auto rules = ruleset(rule1, rule2, rule3, rule4, rule5, rule6, rule7, rule8, rule9, rule10, rule11, rule12, rule13,
+        rule14, rule15, rule16, rule17, rule18, rule19);
 
     //cout << "before = " << state << endl;
     state = fixPoint(rules, state);
@@ -188,6 +191,22 @@ bool po1()
     operator<< <A>(cout, computedA);
     cout << endl;
 
+    delete a;
+    delete b;
+    delete c;
+    delete d;
+    delete e;
+    delete f;
+    delete i;
+    delete anon1;
+    delete anon2;
+    delete anon3;
+    delete anon4;
+    delete anon5;
+    delete anon6;
+    delete anon7;
+    delete anon8;
+    
     return computedA == aOut;
 }
 #endif
@@ -220,10 +239,10 @@ bool test4()
         {sally, 40u, female, netherlands}
     };
 
-    auto name = var<Name>();
-    auto age = var<Age>();
-    auto gender = var<Gender>();
-    auto country = var<Country>();
+    auto name = new Variable<Name>();
+    auto age = new Variable<Age>();
+    auto gender = new Variable<Gender>();
+    auto country = new Variable<Country>();
 
     struct Female : Relation<Name>{}; 
     auto females = rule(
@@ -234,7 +253,7 @@ bool test4()
     typedef float Metres;
     struct Height : Relation<Name, Metres>{}; 
 
-    auto height = var<Metres>();
+    auto height = new Variable<Metres>();
 
     auto heights = rule(
         atom<Height>(name, 1.0f),
@@ -243,16 +262,16 @@ bool test4()
         )
     );
 
-#if 0
+
     // Use this pattern to get at values too
     auto anyPerson = atom<Person>(name, age, gender, country);
 
-    auto externalHeights = rule(
+    auto externalHeights1 = rule(
         atom<Height>(name, height),
         body(
             atom<Person>(name, age, gender, country)
         ),
-        external(
+        lambda(
             height, 
             [&anyPerson]() { 
                 cout << "hello world!" << endl;
@@ -262,24 +281,27 @@ bool test4()
             }
         )
     );
-#else
+
     // Use this pattern to get at variables (values can't be got directly)
     auto externalHeights = rule(
         atom<Height>(name, height),
         body(atom<Person>(name, age, female, country)),
-        lambda(height, [&age]() { return val(age) * 3.0f; } )
+        lambda(height, [&age]() { return age->value() * 3.0f; } )
     );
-#endif
 
     // Apply rules
+    auto rules = ruleset(females, heights, externalHeights);
     State<Person, Female, Height> state{people, {}, {}};
-    RuleSet<decltype(females), decltype(heights), decltype(externalHeights)> rules{
-        {females, heights, externalHeights}
-    };
 
     cout << "before = " << state << endl;
     state = fixPoint(rules, state);
     cout << "after = " << state << endl;
+
+    delete name;
+    delete age;
+    delete gender;
+    delete country;
+    delete height;
 
     return true;
 }
@@ -288,6 +310,7 @@ int main()
 {
     bool ok1 = test1();
     bool ok2 = test2();
+#if 1
     bool ok3 = po1();
     bool ok4 = test4();
 
@@ -298,5 +321,6 @@ int main()
         cout << "PASSED" << endl;
         return 0;
     }
+#endif
     return 1;
 }

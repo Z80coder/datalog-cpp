@@ -61,26 +61,26 @@ void deleteVar(Variable<T>* v) {
 }
 
 template <typename T>
-static void unbind(Variable<T>* t) {
+void unbind(Variable<T>* t) {
     t->unbind();
 }
 
 template <typename T>
-static void unbind(const T& t) {}
+void unbind(const T& t) {}
 
 template <typename... Ts>
-static void unbind(const tuple<Ts...> &tuple)
+void unbind(const tuple<Ts...> &tuple)
 {
 	apply([](auto &&... args) { ((unbind(args), ...)); }, tuple);
 }
 
 template <typename T>
-static bool bind(const T& a, const T& b) {
+bool bind(const T& a, const T& b) {
     return a == b;
 }
 
 template <typename T>
-static bool bind(const T& a, Variable<T>* b) {
+bool bind(const T& a, Variable<T>* b) {
     if (b->isBound()) {
         return b->value() == a;
     }
@@ -89,38 +89,38 @@ static bool bind(const T& a, Variable<T>* b) {
 }
 
 template <typename GROUND_TYPE, typename ... Ts, size_t... Is>
-static bool bind(const GROUND_TYPE &fact, tuple<Ts...> &atom, index_sequence<Is...>)
+bool bind(const GROUND_TYPE &fact, tuple<Ts...> &atom, index_sequence<Is...>)
 {
 	return ((bind(get<Is>(fact), get<Is>(atom))) and ...);
 }
 
 template <typename GROUND_TYPE, typename ... Ts>
-static bool bind(const GROUND_TYPE &fact, tuple<Ts...> &atom)
+bool bind(const GROUND_TYPE &fact, tuple<Ts...> &atom)
 {
 	return bind(fact, atom, make_index_sequence<tuple_size<GROUND_TYPE>::value>{});
 }
 
 template <typename T>
-static void ground(const Variable<T>* s, T &v)
+void ground(const Variable<T>* s, T &v)
 {
 	// N.B. bad optional access is thrown if th variable isn't bound
     v = s->value();
 }
 
 template <typename T>
-static void ground(const T &s, T &v)
+void ground(const T &s, T &v)
 {
     v = s;
 }
 
 template <typename RELATION_TYPE, typename ... Ts, size_t... Is>
-static void ground(const tuple<Ts...> &atom, typename RELATION_TYPE::Ground &groundAtom, index_sequence<Is...>)
+void ground(const tuple<Ts...> &atom, typename RELATION_TYPE::Ground &groundAtom, index_sequence<Is...>)
 {
 	((ground(get<Is>(atom), get<Is>(groundAtom))), ...);
 }
 
 template <typename RELATION_TYPE, typename ... Ts>
-static typename RELATION_TYPE::Ground ground(const tuple<Ts...> &atom)
+typename RELATION_TYPE::Ground ground(const tuple<Ts...> &atom)
 {
 	typename RELATION_TYPE::Ground groundAtom;
 	ground<RELATION_TYPE>(atom, groundAtom, make_index_sequence<tuple_size<typename RELATION_TYPE::Ground>::value>{});
@@ -135,12 +135,12 @@ struct AtomTypeSpecifier {
 };
 
 template <typename ... Ts>
-static tuple<Ts...> atomImpl(Ts&&... args) {
+tuple<Ts...> atomImpl(Ts&&... args) {
     return tuple<Ts...>{args...};
 }
 
 template <typename RELATION_TYPE, typename ... Us>
-static AtomTypeSpecifier<RELATION_TYPE, Us...> atom(Us&&... args) {
+AtomTypeSpecifier<RELATION_TYPE, Us...> atom(Us&&... args) {
 	return AtomTypeSpecifier<RELATION_TYPE, Us...>{atomImpl(args...)};
 }
 
@@ -220,7 +220,7 @@ struct ExternalRuleInstance {
 };
 
 template <typename HEAD_ATOM_SPECIFIER, typename... BODY_ATOM_SPECIFIERs>
-static RuleInstance<HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...> rule(
+RuleInstance<HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...> rule(
 	const HEAD_ATOM_SPECIFIER& h,
 	const BODY_ATOM_SPECIFIERs&... b
 ) {
@@ -231,7 +231,7 @@ static RuleInstance<HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...> rule(
 }
 
 template <typename HEAD_ATOM_SPECIFIER, typename... BODY_ATOM_SPECIFIERs>
-static RuleInstance<HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...> rule(
+RuleInstance<HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...> rule(
 	const HEAD_ATOM_SPECIFIER& h,
 	const BodyAtoms<BODY_ATOM_SPECIFIERs...>& b
 ) {
@@ -250,19 +250,19 @@ struct ExternalFunction {
 };
 
 template<typename T>
-static ExternalFunction<T> lambda(
+ExternalFunction<T> lambda(
 	Variable<T>* bindVariable,
 	typename ExternalFunction<T>::ExternalFunctionType externalFunction) {
 	return ExternalFunction<T> {bindVariable, externalFunction};
 }
 
 template<typename ... BODY_ATOM_SPECIFIERs>
-static BodyAtoms<BODY_ATOM_SPECIFIERs...> body(BODY_ATOM_SPECIFIERs&&... bodyAtoms) {
+BodyAtoms<BODY_ATOM_SPECIFIERs...> body(BODY_ATOM_SPECIFIERs&&... bodyAtoms) {
 	return BodyAtoms<BODY_ATOM_SPECIFIERs...>{{bodyAtoms.atom...}};
 }
 
 template <typename HEAD_ATOM_SPECIFIER, typename... BODY_ATOM_SPECIFIERs, typename... EXTERNAL_TYPEs>
-static ExternalRuleInstance<Externals<EXTERNAL_TYPEs...>, HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...> rule(
+ExternalRuleInstance<Externals<EXTERNAL_TYPEs...>, HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...> rule(
 	const HEAD_ATOM_SPECIFIER& h,
 	const BodyAtoms<BODY_ATOM_SPECIFIERs...>& b,
 	const EXTERNAL_TYPEs&... externals
@@ -273,7 +273,7 @@ static ExternalRuleInstance<Externals<EXTERNAL_TYPEs...>, HEAD_ATOM_SPECIFIER, B
 }
 
 template <typename RELATION_TYPE>
-static ostream& operator<<(ostream& out, const typename RELATION_TYPE::Ground& t) {
+ostream& operator<<(ostream& out, const typename RELATION_TYPE::Ground& t) {
 	out << "[";
 	apply([&out](auto &&... args) { ((out << " " << args << " "), ...); }, t);
 	out << "]";
@@ -281,7 +281,7 @@ static ostream& operator<<(ostream& out, const typename RELATION_TYPE::Ground& t
 }
 
 template<typename RELATION_TYPE>
-static ostream & operator<<(ostream &out, const typename RELATION_TYPE::Set& relationSet)
+ostream & operator<<(ostream &out, const typename RELATION_TYPE::Set& relationSet)
 {
 	out << "\"" << typeid(relationSet).name() << "\"" << endl;
 	for (const auto& tuple : relationSet) {
@@ -297,7 +297,7 @@ struct RelationSet {
 };
 
 template<typename RELATION_TYPE>
-static ostream & operator<<(ostream &out, const RelationSet<RELATION_TYPE>& relationSet)
+ostream & operator<<(ostream &out, const RelationSet<RELATION_TYPE>& relationSet)
 {
 	out << "\"" << typeid(relationSet).name() << "\"" << endl;
 	for (const auto& tuple : relationSet.set) {
@@ -542,13 +542,13 @@ ostream & operator<<(ostream &out, const State<RELATIONs...>& state) {
 }
 
 template <typename RULE_INSTANCE_TYPE>
-static void unbind(const typename RULE_INSTANCE_TYPE::BodyType &atoms)
+void unbind(const typename RULE_INSTANCE_TYPE::BodyType &atoms)
 {
 	apply([](auto &&... args) { ((unbind(args)), ...); }, atoms);
 }
 
 template <size_t I, typename RULE_INSTANCE_TYPE, typename RULE_TYPE>
-static bool bindBodyAtomsToSlice(typename RULE_INSTANCE_TYPE::BodyType &atoms,
+bool bindBodyAtomsToSlice(typename RULE_INSTANCE_TYPE::BodyType &atoms,
 				 const typename RULE_TYPE::SliceType &slice)
 {
 	auto factPtr = get<I>(slice);
@@ -565,27 +565,27 @@ static bool bindBodyAtomsToSlice(typename RULE_INSTANCE_TYPE::BodyType &atoms,
 }
 
 template <typename RULE_INSTANCE_TYPE, typename RULE_TYPE, size_t... Is>
-static bool bindBodyAtomsToSlice(typename RULE_INSTANCE_TYPE::BodyType &atoms,
+bool bindBodyAtomsToSlice(typename RULE_INSTANCE_TYPE::BodyType &atoms,
 				 const typename RULE_TYPE::SliceType &slice, index_sequence<Is...>)
 {
 	return ((bindBodyAtomsToSlice<Is, RULE_INSTANCE_TYPE, RULE_TYPE>(atoms, slice)) and ...);
 }
 
 template <typename RULE_INSTANCE_TYPE, typename RULE_TYPE>
-static bool bindBodyAtomsToSlice(typename RULE_INSTANCE_TYPE::BodyType &atoms, const typename RULE_TYPE::SliceType &slice)
+bool bindBodyAtomsToSlice(typename RULE_INSTANCE_TYPE::BodyType &atoms, const typename RULE_TYPE::SliceType &slice)
 {
 	// for each atom, bind with corresponding relation type in slice
 	return bindBodyAtomsToSlice<RULE_INSTANCE_TYPE, RULE_TYPE>(atoms, slice, make_index_sequence<tuple_size<typename RULE_INSTANCE_TYPE::BodyType>::value>{});
 }
 
 template <typename RELATION_TYPE, size_t... Is>
-static void ground(const typename RELATION_TYPE::Atom &atom, typename RELATION_TYPE::Ground &groundAtom, index_sequence<Is...>)
+void ground(const typename RELATION_TYPE::Atom &atom, typename RELATION_TYPE::Ground &groundAtom, index_sequence<Is...>)
 {
 	((ground(get<Is>(atom), get<Is>(groundAtom))), ...);
 }
 
 template <typename RELATION_TYPE>
-static typename RELATION_TYPE::Ground ground(const typename RELATION_TYPE::Atom &atom)
+typename RELATION_TYPE::Ground ground(const typename RELATION_TYPE::Atom &atom)
 {
 	typename RELATION_TYPE::Ground groundAtom;
 	ground<RELATION_TYPE>(atom, groundAtom, make_index_sequence<tuple_size<typename RELATION_TYPE::Atom>::value>{});
@@ -593,13 +593,13 @@ static typename RELATION_TYPE::Ground ground(const typename RELATION_TYPE::Atom 
 }
 
 template <typename RELATION_TYPE, typename ... Ts>
-static typename RELATION_TYPE::Ground ground(const AtomTypeSpecifier<RELATION_TYPE, Ts...> &atomTypeSpecifier)
+typename RELATION_TYPE::Ground ground(const AtomTypeSpecifier<RELATION_TYPE, Ts...> &atomTypeSpecifier)
 {
 	return ground<RELATION_TYPE>(atomTypeSpecifier.atom);
 }
 
 template <size_t I, typename RULE_TYPE>
-static bool unseenSlice(size_t iteration, const typename RULE_TYPE::SliceType &slice)
+bool unseenSlice(size_t iteration, const typename RULE_TYPE::SliceType &slice)
 {
 	auto factPtr = get<I>(slice);
 	if (factPtr) {
@@ -610,42 +610,42 @@ static bool unseenSlice(size_t iteration, const typename RULE_TYPE::SliceType &s
 }
 
 template <typename RULE_TYPE, size_t... Is>
-static bool unseenSlice(size_t iteration, const typename RULE_TYPE::SliceType &slice, index_sequence<Is...>)
+bool unseenSlice(size_t iteration, const typename RULE_TYPE::SliceType &slice, index_sequence<Is...>)
 {
 	return ((unseenSlice<Is, RULE_TYPE>(iteration, slice)) or ...);
 }
 
 template <typename RULE_TYPE>
-static bool unseenSlice(size_t iteration, const typename RULE_TYPE::SliceType &slice) {
+bool unseenSlice(size_t iteration, const typename RULE_TYPE::SliceType &slice) {
 	return unseenSlice<RULE_TYPE>(iteration, slice, make_index_sequence<tuple_size<typename RULE_TYPE::BodyRelations>::value>{});
 	return true;
 }
 
 template<size_t I, typename RULE_TYPE, typename STATE_TYPE>
-static bool unseenSlicePossible(const typename STATE_TYPE::StateSizesType& stateSizeDelta) {
+bool unseenSlicePossible(const typename STATE_TYPE::StateSizesType& stateSizeDelta) {
 	typedef typename tuple_element<I, typename RULE_TYPE::BodyRelations>::type RelationType;
 	const auto& sizeDelta = get<RelationSize<RelationType>>(stateSizeDelta);
 	return sizeDelta.size > 0;
 }
 
 template<typename RULE_TYPE, typename STATE_TYPE, size_t ... Is>
-static bool unseenSlicePossible(const typename STATE_TYPE::StateSizesType& stateSizeDelta, index_sequence<Is...>) {
+bool unseenSlicePossible(const typename STATE_TYPE::StateSizesType& stateSizeDelta, index_sequence<Is...>) {
 	return ((unseenSlicePossible<Is, RULE_TYPE, STATE_TYPE>(stateSizeDelta)) or ...);
 }
 
 template<typename RULE_TYPE, typename STATE_TYPE>
-static bool unseenSlicePossible(const typename STATE_TYPE::StateSizesType& stateSizeDelta) {
+bool unseenSlicePossible(const typename STATE_TYPE::StateSizesType& stateSizeDelta) {
 	auto indexSequence = make_index_sequence<tuple_size<typename RULE_TYPE::BodyRelations>::value>{};
 	return unseenSlicePossible<RULE_TYPE, STATE_TYPE>(stateSizeDelta, indexSequence);
 }
 
 template <typename HEAD_ATOM_SPECIFIER, typename... BODY_ATOM_SPECIFIERs>
-static bool bindExternals(const RuleInstance<HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...>& rule) {
+bool bindExternals(const RuleInstance<HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...>& rule) {
 	return true;
 }
 
 template<size_t I, typename... Ts, typename HEAD_ATOM_SPECIFIER, typename... BODY_ATOM_SPECIFIERs>
-static bool bindExternal(const ExternalRuleInstance<Externals<Ts...>, HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...>& rule) {
+bool bindExternal(const ExternalRuleInstance<Externals<Ts...>, HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...>& rule) {
 	auto& external = get<I>(rule.externals.externals);
 	auto value = external.externalFunction();
 	//cout << "external function returned " << value << endl;
@@ -654,37 +654,37 @@ static bool bindExternal(const ExternalRuleInstance<Externals<Ts...>, HEAD_ATOM_
 }
 
 template <typename... Ts, typename HEAD_ATOM_SPECIFIER, typename... BODY_ATOM_SPECIFIERs, size_t ... Is>
-static bool bindExternals(const ExternalRuleInstance<Externals<Ts...>, HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...>& rule, index_sequence<Is...>) {
+bool bindExternals(const ExternalRuleInstance<Externals<Ts...>, HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...>& rule, index_sequence<Is...>) {
 	return ((bindExternal<Is>(rule)) and ...);
 }
 
 template <typename... Ts, typename HEAD_ATOM_SPECIFIER, typename... BODY_ATOM_SPECIFIERs>
-static bool bindExternals(const ExternalRuleInstance<Externals<Ts...>, HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...>& rule) {
+bool bindExternals(const ExternalRuleInstance<Externals<Ts...>, HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...>& rule) {
 	return bindExternals(rule, make_index_sequence<tuple_size<typename Externals<Ts...>::ExternalsTupleType>::value>{});
 }
 
 template <typename HEAD_ATOM_SPECIFIER, typename... BODY_ATOM_SPECIFIERs>
-static void unbindExternals(const RuleInstance<HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...>& rule) {}
+void unbindExternals(const RuleInstance<HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...>& rule) {}
 
 template<size_t I, typename... Ts, typename HEAD_ATOM_SPECIFIER, typename... BODY_ATOM_SPECIFIERs>
-static void unbindExternal(const ExternalRuleInstance<Externals<Ts...>, HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...>& rule) {
+void unbindExternal(const ExternalRuleInstance<Externals<Ts...>, HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...>& rule) {
 	auto& external = get<I>(rule.externals.externals);
 	auto& bindVariable = external.bindVariable;
 	bindVariable->unbind();
 }
 
 template <typename... Ts, typename HEAD_ATOM_SPECIFIER, typename... BODY_ATOM_SPECIFIERs, size_t ... Is>
-static void unbindExternals(const ExternalRuleInstance<Externals<Ts...>, HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...>& rule, index_sequence<Is...>) {
+void unbindExternals(const ExternalRuleInstance<Externals<Ts...>, HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...>& rule, index_sequence<Is...>) {
 	return ((unbindExternal<Is>(rule)), ...);
 }
 
 template <typename... Ts, typename HEAD_ATOM_SPECIFIER, typename... BODY_ATOM_SPECIFIERs>
-static void unbindExternals(const ExternalRuleInstance<Externals<Ts...>, HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...>& rule) {
+void unbindExternals(const ExternalRuleInstance<Externals<Ts...>, HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...>& rule) {
 	unbindExternals(rule, make_index_sequence<tuple_size<typename Externals<Ts...>::ExternalsTupleType>::value>{});
 }
 
 template <typename RULE_TYPE, typename STATE_TYPE>
-static RelationSet<typename RULE_TYPE::RuleType::HeadRelationType> applyRule(
+RelationSet<typename RULE_TYPE::RuleType::HeadRelationType> applyRule(
 	size_t iteration, 
 	const typename STATE_TYPE::StateSizesType& stateSizeDelta,
 	RULE_TYPE &rule, 
@@ -721,31 +721,31 @@ static RelationSet<typename RULE_TYPE::RuleType::HeadRelationType> applyRule(
 }
 
 template <typename RELATION_TYPE>
-static void merge(RelationSet<RELATION_TYPE>& s1, RelationSet<RELATION_TYPE>&s2)
+void merge(RelationSet<RELATION_TYPE>& s1, RelationSet<RELATION_TYPE>&s2)
 {
 	s2.set.merge(s1.set);
 }
 
 template<size_t I, typename STATE_RELATIONS_TYPE>
-static void merge(STATE_RELATIONS_TYPE& newState, STATE_RELATIONS_TYPE& state) {
+void merge(STATE_RELATIONS_TYPE& newState, STATE_RELATIONS_TYPE& state) {
 	auto& newSet = get<I>(newState.stateRelations);
 	auto& set = get<I>(state.stateRelations);
 	merge(newSet, set);
 }
 
 template <size_t ... Is, typename STATE_RELATIONS_TYPE>
-static void merge(STATE_RELATIONS_TYPE& newState, STATE_RELATIONS_TYPE& state, index_sequence<Is...>) {
+void merge(STATE_RELATIONS_TYPE& newState, STATE_RELATIONS_TYPE& state, index_sequence<Is...>) {
 	((merge<Is>(newState, state)), ...);
 }
 
 template<typename ... RELATIONs>
-static void merge(State<RELATIONs...> &newState, State<RELATIONs...> &state) {
+void merge(State<RELATIONs...> &newState, State<RELATIONs...> &state) {
 	typedef typename State<RELATIONs...>::StateRelationsType StateRelationsType;
 	return merge(newState, state, make_index_sequence<tuple_size<StateRelationsType>::value>{});
 }
 
 template <typename RELATION_TYPE, typename ... RELATIONs>
-static void assign(RelationSet<RELATION_TYPE>&& facts, State<RELATIONs...> &state) {
+void assign(RelationSet<RELATION_TYPE>&& facts, State<RELATIONs...> &state) {
 	typedef RelationSet<RELATION_TYPE> SetType;
 	merge(facts, get<SetType>(state.stateRelations));
 }
@@ -761,7 +761,7 @@ RuleSet<RULE_TYPEs...> ruleset(RULE_TYPEs&&... r) {
 }
 
 template <typename ... RULE_TYPEs, typename... RELATIONs>
-static void applyRuleSet(
+void applyRuleSet(
 	size_t iteration, 
 	typename State<RELATIONs...>::StateSizesType& stateSizeDelta,
 	RuleSet<RULE_TYPEs...> &ruleSet, 
@@ -781,7 +781,7 @@ static void applyRuleSet(
 }
 
 template <typename ... RULE_TYPEs, typename... RELATIONs>
-static State<RELATIONs...> fixPoint(RuleSet<RULE_TYPEs...> &ruleSet, const State<RELATIONs...> &state) {
+State<RELATIONs...> fixPoint(RuleSet<RULE_TYPEs...> &ruleSet, const State<RELATIONs...> &state) {
 	typedef State<RELATIONs...> StateType;
 	StateType newState{state};
 	typename State<RELATIONs...>::StateSizesType stateSizeDelta;

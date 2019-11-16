@@ -3,13 +3,15 @@
 
 #include <tuple>
 #include <set>
+#include <unordered_set>
 #include <numeric>
 #include <optional>
 #include <limits>
 #include <functional>
 #include <cassert>
 #include <iostream>
-#include <memory>
+
+#include "tuple_hash.h"
 
 namespace datalog
 {
@@ -41,28 +43,30 @@ struct Variable : optional<T>
 	}
 };
 
+// TODO: use auto more for return type of functions
+
 template<typename T>
-T val(unique_ptr<Variable<T>>& var) {
-	return var->value();
+Variable<T>* var() {
+	return new Variable<T>();
 }
 
 template<typename T>
-unique_ptr<Variable<T>> var() {
-	return make_unique<Variable<T>>();
+T val(Variable<T>* t) {
+	return t->value();
 }
+
+template<typename T>
+void deleteVar(Variable<T>* v) {
+	delete v;
+}
+
+template <typename T>
+static void unbind(const T& t) {}
 
 template <typename T>
 static void unbind(Variable<T>* t) {
     t->unbind();
 }
-
-template <typename T>
-static void unbind(unique_ptr<Variable<T>>& t) {
-    unbind(t.get());
-}
-
-template <typename T>
-static void unbind(const T& t) {}
 
 template <typename... Ts>
 static void unbind(const tuple<Ts...> &tuple)
@@ -84,11 +88,6 @@ static bool bind(const T& a, Variable<T>* b) {
     return true;
 }
 
-template <typename T>
-static bool bind(const T& a, unique_ptr<Variable<T>>& b) {
-	return bind(a, b.get());
-}
-
 template <typename GROUND_TYPE, typename ... Ts, size_t... Is>
 static bool bind(const GROUND_TYPE &fact, tuple<Ts...> &atom, index_sequence<Is...>)
 {
@@ -106,12 +105,6 @@ static void ground(const Variable<T>* s, T &v)
 {
 	// N.B. bad optional access is thrown if th variable isn't bound
     v = s->value();
-}
-
-template <typename T>
-static void ground(const unique_ptr<Variable<T>>& s, T &v)
-{
-	ground(s.get(), v);
 }
 
 template <typename T>
@@ -137,7 +130,6 @@ static typename RELATION_TYPE::Ground ground(const tuple<Ts...> &atom)
 template<typename RELATION_TYPE, typename ... Ts>
 struct AtomTypeSpecifier {
 	typedef RELATION_TYPE RelationType;
-	// TODO: why not references?
 	typedef tuple<Ts...> AtomType;
 	AtomType atom;
 };
@@ -156,18 +148,34 @@ template <typename... Ts>
 struct Relation                                                                                                        
 {
 	typedef tuple<Ts...> Ground;
-	// TODO: this should be an unordered_set
+#if 1
+	// set seems faster than unordered_set
 	typedef set<Ground> Set;
+#else
+	typedef unordered_set<Ground> Set;
+#endif
+
 	typedef pair<size_t, Ground> TrackedGround;
-	// TODO: this should be an unordered_set
+#if 0
 	struct compare {
 		bool operator() (const TrackedGround& lhs, const TrackedGround& rhs) const {
 			// ignore tracking number
 			return lhs.second < rhs.second;
 		}
 	};
-
 	typedef set<TrackedGround, compare> TrackedSet;
+#else
+	// unordered set seems faster than set
+	struct key_hash : public std::unary_function<TrackedGround, std::size_t>
+	{
+		size_t operator()(const TrackedGround& k) const
+		{
+			hash<decltype(k.second)> h;
+			return k.first ^ h.operator()(k.second);
+		}
+	};
+	typedef unordered_set<TrackedGround, key_hash> TrackedSet;
+#endif
 
 };
 
@@ -182,8 +190,6 @@ struct Rule
 
 template<typename ... EXTERNAL_TYPEs>
 struct Externals {
-	// N.B. We need to store the ExternalFunctions
-	//typedef tuple<const EXTERNAL_TYPEs&...> ExternalsTupleType;
 	typedef tuple<const EXTERNAL_TYPEs...> ExternalsTupleType;
 	ExternalsTupleType externals;
 };
@@ -193,8 +199,6 @@ struct BodyAtoms {
 	tuple<typename BODY_ATOM_SPECIFIERs::AtomType...> body;
 };
 
-// Note that RuleInstances store atoms (and therefore atoms specified during construction are copied).
-// This is OK since all copies of atoms still refer to the same shared variables
 template <typename HEAD_ATOM_SPECIFIER, typename... BODY_ATOM_SPECIFIERs>
 struct RuleInstance {
 	typedef Rule<typename HEAD_ATOM_SPECIFIER::RelationType, typename BODY_ATOM_SPECIFIERs::RelationType...> RuleType;
@@ -204,12 +208,6 @@ struct RuleInstance {
 	BodyType body;
 };
 
-#if 0
-template <typename EXTERNALS_TYPE, typename HEAD_ATOM_SPECIFIER, typename... BODY_ATOM_SPECIFIERs>
-struct ExternalRuleInstance : RuleInstance<HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...> {
-	const EXTERNALS_TYPE& externals;
-};
-#else
 template <typename EXTERNALS_TYPE, typename HEAD_ATOM_SPECIFIER, typename... BODY_ATOM_SPECIFIERs>
 struct ExternalRuleInstance {
 	typedef Rule<typename HEAD_ATOM_SPECIFIER::RelationType, typename BODY_ATOM_SPECIFIERs::RelationType...> RuleType;
@@ -217,9 +215,8 @@ struct ExternalRuleInstance {
 	const HeadType head;
 	typedef tuple<typename BODY_ATOM_SPECIFIERs::AtomType...> BodyType;
 	BodyType body;
-	const EXTERNALS_TYPE& externals;
+	const EXTERNALS_TYPE externals;
 };
-#endif
 
 template <typename HEAD_ATOM_SPECIFIER, typename... BODY_ATOM_SPECIFIERs>
 static RuleInstance<HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...> rule(
@@ -246,34 +243,22 @@ static RuleInstance<HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...> rule(
 
 template<typename T>
 struct ExternalFunction {
-	Variable<T>& bindVariable;
+	Variable<T>* bindVariable;
 	typedef function<T()> ExternalFunctionType;
 	ExternalFunctionType externalFunction;
 };
 
 template<typename T>
 static ExternalFunction<T> lambda(
-	unique_ptr<Variable<T>>& bindVariable,
+	Variable<T>* bindVariable,
 	typename ExternalFunction<T>::ExternalFunctionType externalFunction) {
-	return ExternalFunction<T> {*bindVariable, externalFunction};
+	return ExternalFunction<T> {bindVariable, externalFunction};
 }
 
-#if 0
 template<typename ... BODY_ATOM_SPECIFIERs>
 static BodyAtoms<BODY_ATOM_SPECIFIERs...> body(BODY_ATOM_SPECIFIERs&&... bodyAtoms) {
 	return BodyAtoms<BODY_ATOM_SPECIFIERs...>{{bodyAtoms.atom...}};
 }
-
-template<typename ... BODY_ATOM_SPECIFIERs>
-static BodyAtoms<BODY_ATOM_SPECIFIERs...> body(BODY_ATOM_SPECIFIERs&... bodyAtoms) {
-	return BodyAtoms<BODY_ATOM_SPECIFIERs...>{{bodyAtoms.atom...}};
-}
-#else
-template<typename ... BODY_ATOM_SPECIFIERs>
-static BodyAtoms<BODY_ATOM_SPECIFIERs...> body(BODY_ATOM_SPECIFIERs... bodyAtoms) {
-	return BodyAtoms<BODY_ATOM_SPECIFIERs...>{{bodyAtoms.atom...}};
-}
-#endif
 
 template <typename HEAD_ATOM_SPECIFIER, typename... BODY_ATOM_SPECIFIERs, typename... EXTERNAL_TYPEs>
 static ExternalRuleInstance<Externals<EXTERNAL_TYPEs...>, HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...> rule(
@@ -315,7 +300,7 @@ static ostream & operator<<(ostream &out, const RelationSet<RELATION_TYPE>& rela
 {
 	out << "\"" << typeid(relationSet).name() << "\"" << endl;
 	for (const auto& tuple : relationSet.set) {
-		operator<< <RELATION_TYPE>(out, tuple.second);
+		datalog::operator<< <RELATION_TYPE>(out, tuple.second);
 		out << endl;
 	}
 	return out;
@@ -664,7 +649,7 @@ static bool bindExternal(const ExternalRuleInstance<Externals<Ts...>, HEAD_ATOM_
 	auto value = external.externalFunction();
 	//cout << "external function returned " << value << endl;
 	auto& bindVariable = external.bindVariable;
-	return datalog::bind(value, &bindVariable);
+	return datalog::bind(value, bindVariable);
 }
 
 template <typename... Ts, typename HEAD_ATOM_SPECIFIER, typename... BODY_ATOM_SPECIFIERs, size_t ... Is>
@@ -684,7 +669,7 @@ template<size_t I, typename... Ts, typename HEAD_ATOM_SPECIFIER, typename... BOD
 static void unbindExternal(const ExternalRuleInstance<Externals<Ts...>, HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...>& rule) {
 	auto& external = get<I>(rule.externals.externals);
 	auto& bindVariable = external.bindVariable;
-	bindVariable.unbind();
+	bindVariable->unbind();
 }
 
 template <typename... Ts, typename HEAD_ATOM_SPECIFIER, typename... BODY_ATOM_SPECIFIERs, size_t ... Is>
@@ -768,6 +753,11 @@ template <typename ... RULE_TYPEs>
 struct RuleSet {
 	tuple<RULE_TYPEs...> rules;
 };
+
+template <typename ... RULE_TYPEs>
+RuleSet<RULE_TYPEs...> ruleset(RULE_TYPEs&&... r) {
+	return RuleSet<RULE_TYPEs...>{{r...}};
+}
 
 template <typename ... RULE_TYPEs, typename... RELATIONs>
 static void applyRuleSet(

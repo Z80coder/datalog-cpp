@@ -68,11 +68,6 @@ static void unbind(Variable<T>* t) {
 template <typename T>
 static void unbind(const T& t) {}
 
-template <typename T>
-static void unbind(Variable<T>* t) {
-    t->unbind();
-}
-
 template <typename... Ts>
 static void unbind(const tuple<Ts...> &tuple)
 {

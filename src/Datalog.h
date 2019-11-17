@@ -326,7 +326,12 @@ struct State
 
 	template <typename RELATION_TYPE>
 	const typename RELATION_TYPE::Set getSet() const {
-		return convert<RELATION_TYPE>(get<RelationSet<RELATION_TYPE>>(stateRelations).set);
+		return convert<RELATION_TYPE>(getTrackedSet<RELATION_TYPE>());
+	}
+
+	template <typename RELATION_TYPE>
+	const typename RELATION_TYPE::TrackedSet getTrackedSet() const {
+		return get<RelationSet<RELATION_TYPE>>(stateRelations).set;
 	}
 
 	typedef tuple<RelationSize<RELATIONs>...> StateSizesType;

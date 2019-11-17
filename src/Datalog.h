@@ -764,7 +764,7 @@ template <typename ... RULE_TYPEs, typename... RELATIONs>
 void applyRuleSet(
 	size_t iteration, 
 	typename State<RELATIONs...>::StateSizesType& stateSizeDelta,
-	RuleSet<RULE_TYPEs...> &ruleSet, 
+	const RuleSet<RULE_TYPEs...> &ruleSet, 
 	State<RELATIONs...> &state
 ) {
 	// compute new state
@@ -781,7 +781,7 @@ void applyRuleSet(
 }
 
 template <typename ... RULE_TYPEs, typename... RELATIONs>
-State<RELATIONs...> fixPoint(RuleSet<RULE_TYPEs...> &ruleSet, const State<RELATIONs...> &state) {
+State<RELATIONs...> fixPoint(const RuleSet<RULE_TYPEs...> &ruleSet, const State<RELATIONs...> &state) {
 	typedef State<RELATIONs...> StateType;
 	StateType newState{state};
 	typename State<RELATIONs...>::StateSizesType stateSizeDelta;

@@ -495,10 +495,6 @@ struct State
 		return it;
 	}
 
-private:
-	typedef tuple<RELATIONs...> RelationsType;
-	typedef tuple<typename RELATIONs::Set...> TupleType;
-
 	template <typename RELATION_TYPE>
 	static typename RELATION_TYPE::Set convert(const typename RELATION_TYPE::TrackedSet& trackedSet) {
 		typename RELATION_TYPE::Set set;
@@ -507,6 +503,10 @@ private:
 		}
 		return set;
 	}
+
+private:
+	typedef tuple<RELATIONs...> RelationsType;
+	typedef tuple<typename RELATIONs::Set...> TupleType;
 
 	template <typename RELATION_TYPE>
 	static typename RELATION_TYPE::TrackedSet convert(const typename RELATION_TYPE::Set& set) {

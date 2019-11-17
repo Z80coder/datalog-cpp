@@ -244,14 +244,14 @@ RuleInstance<HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...> rule(
 
 template<typename T>
 struct ExternalFunction {
-	Variable<T>* bindVariable;
+	Variable<T>* const& bindVariable;
 	typedef function<T()> ExternalFunctionType;
 	ExternalFunctionType externalFunction;
 };
 
 template<typename T>
 ExternalFunction<T> lambda(
-	Variable<T>* bindVariable,
+	Variable<T>* const& bindVariable,
 	typename ExternalFunction<T>::ExternalFunctionType externalFunction) {
 	return ExternalFunction<T> {bindVariable, externalFunction};
 }

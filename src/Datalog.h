@@ -80,7 +80,7 @@ bool bind(const T& a, const T& b) {
 }
 
 template <typename T>
-bool bind(const T& a, Variable<T>* b) {
+bool bind(const T& a, Variable<T>* const b) {
     if (b->isBound()) {
         return b->value() == a;
     }
@@ -89,13 +89,13 @@ bool bind(const T& a, Variable<T>* b) {
 }
 
 template <typename GROUND_TYPE, typename ... Ts, size_t... Is>
-bool bind(const GROUND_TYPE &fact, tuple<Ts...> &atom, index_sequence<Is...>)
+bool bind(const GROUND_TYPE &fact, const tuple<Ts...> &atom, index_sequence<Is...>)
 {
 	return ((bind(get<Is>(fact), get<Is>(atom))) and ...);
 }
 
 template <typename GROUND_TYPE, typename ... Ts>
-bool bind(const GROUND_TYPE &fact, tuple<Ts...> &atom)
+bool bind(const GROUND_TYPE &fact, const tuple<Ts...> &atom)
 {
 	return bind(fact, atom, make_index_sequence<tuple_size<GROUND_TYPE>::value>{});
 }
@@ -548,7 +548,7 @@ void unbind(const typename RULE_INSTANCE_TYPE::BodyType &atoms)
 }
 
 template <size_t I, typename RULE_INSTANCE_TYPE, typename RULE_TYPE>
-bool bindBodyAtomsToSlice(typename RULE_INSTANCE_TYPE::BodyType &atoms,
+bool bindBodyAtomsToSlice(const typename RULE_INSTANCE_TYPE::BodyType &atoms,
 				 const typename RULE_TYPE::SliceType &slice)
 {
 	auto factPtr = get<I>(slice);
@@ -565,14 +565,14 @@ bool bindBodyAtomsToSlice(typename RULE_INSTANCE_TYPE::BodyType &atoms,
 }
 
 template <typename RULE_INSTANCE_TYPE, typename RULE_TYPE, size_t... Is>
-bool bindBodyAtomsToSlice(typename RULE_INSTANCE_TYPE::BodyType &atoms,
+bool bindBodyAtomsToSlice(const typename RULE_INSTANCE_TYPE::BodyType &atoms,
 				 const typename RULE_TYPE::SliceType &slice, index_sequence<Is...>)
 {
 	return ((bindBodyAtomsToSlice<Is, RULE_INSTANCE_TYPE, RULE_TYPE>(atoms, slice)) and ...);
 }
 
 template <typename RULE_INSTANCE_TYPE, typename RULE_TYPE>
-bool bindBodyAtomsToSlice(typename RULE_INSTANCE_TYPE::BodyType &atoms, const typename RULE_TYPE::SliceType &slice)
+bool bindBodyAtomsToSlice(const typename RULE_INSTANCE_TYPE::BodyType &atoms, const typename RULE_TYPE::SliceType &slice)
 {
 	// for each atom, bind with corresponding relation type in slice
 	return bindBodyAtomsToSlice<RULE_INSTANCE_TYPE, RULE_TYPE>(atoms, slice, make_index_sequence<tuple_size<typename RULE_INSTANCE_TYPE::BodyType>::value>{});

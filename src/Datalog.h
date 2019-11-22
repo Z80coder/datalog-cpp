@@ -495,15 +495,6 @@ struct State
 		return it;
 	}
 
-	template <typename RELATION_TYPE>
-	static typename RELATION_TYPE::Set convert(const typename RELATION_TYPE::TrackedSet& trackedSet) {
-		typename RELATION_TYPE::Set set;
-		for (const auto& relation : trackedSet) {
-			set.insert(relation.second);
-		}
-		return set;
-	}
-
 private:
 	typedef tuple<RELATIONs...> RelationsType;
 	typedef tuple<typename RELATIONs::Set...> TupleType;
@@ -537,6 +528,15 @@ private:
 	}
 
 };
+
+template <typename RELATION_TYPE>
+static typename RELATION_TYPE::Set convert(const typename RELATION_TYPE::TrackedSet& trackedSet) {
+	typename RELATION_TYPE::Set set;
+	for (const auto& relation : trackedSet) {
+		set.insert(relation.second);
+	}
+	return set;
+}
 
 template <typename... RELATIONs>
 ostream & operator<<(ostream &out, const State<RELATIONs...>& state) {
@@ -795,7 +795,7 @@ State<RELATIONs...> fixPoint(const RuleSet<RULE_TYPEs...> &ruleSet, const State<
 		applyRuleSet(iteration, stateSizeDelta, ruleSet, newState);
 		iteration++;
 	} while (StateType::size(stateSizeDelta) > 0);
-	cout << "fix point in " << iteration << " iterations" << endl;
+	//cout << "fix point in " << iteration << " iterations" << endl;
 	return newState;
 }
 

@@ -169,7 +169,9 @@ bool po1()
     // A(15, i) :- Check(a, b, c, _, _, _), In(a, b, c, _, _, _, i).
     auto rule15 = rule(atom<A>(15u, i), atom<Check>(a, b, c, anon1, anon2, anon3), atom<In>(a, b, c, anon4, anon5, anon6, i));
     // A(16, i) :- Check(_, _, _, _, e, f), In(_, _, _, _, e, f, i).
-    auto rule16 = rule(atom<A>(16u, i), atom<Check>(anon1, anon2, anon3, anon4, e, f), atom<In>(anon5, anon6, anon7, anon8, e, f, i));
+    auto rule16 = rule(atom<A>(16u, i), 
+        atom<Check>(anon1, anon2, anon3, anon4, e, f), atom<In>(anon5, anon6, anon7, anon8, e, f, i)
+    );
     // A(17, i) :- Check(a, _, _, _, _, f), In(a, _, _, _, _, f, i).
     auto rule17 = rule(atom<A>(17u, i), atom<Check>(a, anon1, anon2, anon3, anon4, f), atom<In>(a, anon5, anon6, anon7, anon8, f, i));
     // A(18, i) :- Check(a, b, _, _, _, _), In(a, b, _, _, _, _, i).
@@ -274,7 +276,7 @@ bool test4()
         lambda(
             height, 
             [&anyPerson]() { 
-                cout << "hello world!" << endl;
+                //cout << "hello world!" << endl;
                 auto person = ground<Person>(anyPerson);
                 auto age = get<Age>(person);
                 return age * 3.0f; 

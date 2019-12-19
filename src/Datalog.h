@@ -155,8 +155,12 @@ struct Relation
 	typedef unordered_set<Ground> Set;
 #endif
 
+	// XXXX
+	// TODO: unordered_set implementation does not ignore tracking number
+	// FIXME
+
 	typedef pair<size_t, Ground> TrackedGround;
-#if 0
+#if 1
 	struct compare {
 		bool operator() (const TrackedGround& lhs, const TrackedGround& rhs) const {
 			// ignore tracking number

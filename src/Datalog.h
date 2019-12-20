@@ -273,7 +273,7 @@ ExternalRuleInstance<Externals<EXTERNAL_TYPEs...>, HEAD_ATOM_SPECIFIER, BODY_ATO
 ) {
 	typedef ExternalRuleInstance<Externals<EXTERNAL_TYPEs...>, HEAD_ATOM_SPECIFIER, BODY_ATOM_SPECIFIERs...> RuleInstanceType;
 	typename RuleInstanceType::HeadType head{h.atom};
-	return RuleInstanceType{head, b.body, Externals<EXTERNAL_TYPEs...>{externals...}};
+	return RuleInstanceType{head, b.body, Externals<EXTERNAL_TYPEs...>{{externals...}}};
 }
 
 template <typename RELATION_TYPE>

@@ -187,7 +187,11 @@ bool po1()
 
     #include "a.txt"
 
-    const auto& computedA = state.getSet<A>();
+    // TODO: FIXME
+    //const auto& computedA = state.getSet<A>();
+    auto& temp = state.getTrackedSet<A>();
+    const auto& computedA = convert<A>(temp);
+    //return convert<RELATION_TYPE>(getTrackedSet<RELATION_TYPE>());
 
     cout << "result = ";
     operator<< <A>(cout, computedA);

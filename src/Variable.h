@@ -15,29 +15,46 @@ using namespace std;
 template <typename T>
 struct Variable : optional<T>
 {
+    /**
+     * @brief bind this variable to the supplied value (making it an unfree variable)
+     * 
+     * @param value
+     */
     void bind(const T &value)
     {
         this->emplace(value);
     }
 
+    /**
+     * @brief unbinds this variable (making it a free variable)
+     * 
+     */
     void unbind()
     {
         this->reset();
     }
 
+    /**
+     * @brief checks whether this variable is free or bound
+     * 
+     * @return true if bound to a value
+     * @return false if free
+     */
     bool isBound() const
     {
         return this->has_value();
     }
 
-    const T &
-    value() const
+    /**
+     * @brief returns the bound value (if not bound then throws an exception)
+     * 
+     * @return const T& 
+     */
+    const T &value() const
     {
         return this->optional<T>::value();
     }
 };
-
-// TODO: use auto more for return type of functions
 
 template <typename T>
 Variable<T> *var()

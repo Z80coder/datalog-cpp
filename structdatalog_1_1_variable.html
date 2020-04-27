@@ -99,12 +99,16 @@ Collaboration diagram for datalog::Variable&lt; T &gt;:</div>
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
 <tr class="memitem:adc7e78a3a836560fd7362f186d68603e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structdatalog_1_1_variable.html#adc7e78a3a836560fd7362f186d68603e">bind</a> (const T &amp;<a class="el" href="structdatalog_1_1_variable.html#a86513cf77e59f60381bc40c6bc4f6368">value</a>)</td></tr>
+<tr class="memdesc:adc7e78a3a836560fd7362f186d68603e"><td class="mdescLeft">&#160;</td><td class="mdescRight">bind this variable to the supplied value (making it an unfree variable)  <a href="structdatalog_1_1_variable.html#adc7e78a3a836560fd7362f186d68603e">More...</a><br /></td></tr>
 <tr class="separator:adc7e78a3a836560fd7362f186d68603e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0ded63759c4b57ecb9d5c7887036d862"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structdatalog_1_1_variable.html#a0ded63759c4b57ecb9d5c7887036d862">unbind</a> ()</td></tr>
+<tr class="memdesc:a0ded63759c4b57ecb9d5c7887036d862"><td class="mdescLeft">&#160;</td><td class="mdescRight">unbinds this variable (making it a free variable)  <a href="structdatalog_1_1_variable.html#a0ded63759c4b57ecb9d5c7887036d862">More...</a><br /></td></tr>
 <tr class="separator:a0ded63759c4b57ecb9d5c7887036d862"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0061387a3a1fe27f72e18c2f5a5fa5b6"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structdatalog_1_1_variable.html#a0061387a3a1fe27f72e18c2f5a5fa5b6">isBound</a> () const</td></tr>
+<tr class="memdesc:a0061387a3a1fe27f72e18c2f5a5fa5b6"><td class="mdescLeft">&#160;</td><td class="mdescRight">checks whether this variable is free or bound  <a href="structdatalog_1_1_variable.html#a0061387a3a1fe27f72e18c2f5a5fa5b6">More...</a><br /></td></tr>
 <tr class="separator:a0061387a3a1fe27f72e18c2f5a5fa5b6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a86513cf77e59f60381bc40c6bc4f6368"><td class="memItemLeft" align="right" valign="top">const T &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structdatalog_1_1_variable.html#a86513cf77e59f60381bc40c6bc4f6368">value</a> () const</td></tr>
+<tr class="memdesc:a86513cf77e59f60381bc40c6bc4f6368"><td class="mdescLeft">&#160;</td><td class="mdescRight">returns the bound value (if not bound then throws an exception)  <a href="structdatalog_1_1_variable.html#a86513cf77e59f60381bc40c6bc4f6368">More...</a><br /></td></tr>
 <tr class="separator:a86513cf77e59f60381bc40c6bc4f6368"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
@@ -147,7 +151,15 @@ template&lt;typename T &gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_variable_8h_source.html#l00018">18</a> of file <a class="el" href="_variable_8h_source.html">Variable.h</a>.</p>
+<p>bind this variable to the supplied value (making it an unfree variable) </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">value</td><td></td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_variable_8h_source.html#l00023">23</a> of file <a class="el" href="_variable_8h_source.html">Variable.h</a>.</p>
 
 </div>
 </div>
@@ -176,7 +188,12 @@ template&lt;typename T &gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_variable_8h_source.html#l00028">28</a> of file <a class="el" href="_variable_8h_source.html">Variable.h</a>.</p>
+<p>checks whether this variable is free or bound </p>
+<dl class="section return"><dt>Returns</dt><dd>true if bound to a value </dd>
+<dd>
+false if free </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_variable_8h_source.html#l00043">43</a> of file <a class="el" href="_variable_8h_source.html">Variable.h</a>.</p>
 
 </div>
 </div>
@@ -205,7 +222,9 @@ template&lt;typename T &gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_variable_8h_source.html#l00023">23</a> of file <a class="el" href="_variable_8h_source.html">Variable.h</a>.</p>
+<p>unbinds this variable (making it a free variable) </p>
+
+<p class="definition">Definition at line <a class="el" href="_variable_8h_source.html#l00032">32</a> of file <a class="el" href="_variable_8h_source.html">Variable.h</a>.</p>
 
 </div>
 </div>
@@ -234,7 +253,10 @@ template&lt;typename T &gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_variable_8h_source.html#l00034">34</a> of file <a class="el" href="_variable_8h_source.html">Variable.h</a>.</p>
+<p>returns the bound value (if not bound then throws an exception) </p>
+<dl class="section return"><dt>Returns</dt><dd>const T&amp; </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_variable_8h_source.html#l00053">53</a> of file <a class="el" href="_variable_8h_source.html">Variable.h</a>.</p>
 
 </div>
 </div>

@@ -13,7 +13,7 @@ make
 
 Add the C/C++ extension for Visual Studio Code for IntelliSense configuration: in the IDE press `CTRL-P` and then paste the command `ext install ms-vscode.cpptools`.
 
-Typping `CTRL-SHIFT-B` in the IDE will automatically build the proejct.
+Ensure you have built the makefiles as per above. Then holding `CTRL-SHIFT-B` in the IDE will automatically build the project.
 
 # Building directly with CMake in Visual Studio 2019
 Visual Studio 2019 supports using CMake to manage the build directly by selecting File -> Open -> Cmake... and opening `src/CMakeLists.txt`. Then Visual Studio's normal build shortcuts will update the CMake configuration as well as building the project.

@@ -11,9 +11,7 @@ bool freeVariableTest() {
 bool boundVariableTest() {
     Variable<int> intVar;
     intVar.bind(0);
-    // break this
-    //return intVar.isBound();
-    return !intVar.isBound();
+    return intVar.isBound();
 }
 
 TEST_CASE( "An new variable is unbound", "[variable]" ) {

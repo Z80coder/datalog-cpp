@@ -21,12 +21,17 @@ project("datalog-cpp")
 # specify the C++ standard
 set(CMAKE_CXX_STANDARD 17)
 
+# unit-test library
+add_library(tests_main STATIC ../tests/tests_main.cpp)
+
 # types_test target
 add_executable(types_test ../tests/types_test.cpp)
 target_include_directories(types_test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(types_test tests_main)
 target_compile_definitions(types_test PUBLIC UNIX)
 
 # variable_test target
 add_executable(variable_test ../tests/variable_test.cpp)
 target_include_directories(variable_test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(variable_test tests_main)
 target_compile_definitions(variable_test PUBLIC UNIX)

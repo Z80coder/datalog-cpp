@@ -1,0 +1,22 @@
+name: CI for Linux
+
+on: push
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: build
+      run: |
+        mkdir build && cd build
+        cmake ../src
+        make
+        cd ..
+    - name: regression test
+      run: |
+        cd tests
+        pwd
+        ls -l
+        ./run_tests.sh

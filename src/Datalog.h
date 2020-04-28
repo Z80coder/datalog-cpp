@@ -9,6 +9,7 @@
 #include <functional>
 #include <cassert>
 #include <iostream>
+#include <tuple>
 
 #include "tuple_hash.h"
 #include "Variable.h"
@@ -17,6 +18,56 @@ namespace datalog
 {
 
 using namespace std;
+
+template <typename T>
+Variable<T> *var()
+{
+    return new Variable<T>();
+}
+
+template <typename T>
+T val(Variable<T> *t)
+{
+    return t->value();
+}
+
+template <typename T>
+void deleteVar(Variable<T> *v)
+{
+    delete v;
+}
+
+template <typename T>
+void unbind(Variable<T> *t)
+{
+    t->unbind();
+}
+
+template <typename T>
+void unbind(const T &t) {}
+
+template <typename... Ts>
+void unbind(const tuple<Ts...> &tuple)
+{
+    apply([](auto &&... args) { ((unbind(args), ...)); }, tuple);
+}
+
+template <typename T>
+bool bind(const T &a, const T &b)
+{
+    return a == b;
+}
+
+template <typename T>
+bool bind(const T &a, Variable<T> *const b)
+{
+    if (b->isBound())
+    {
+        return b->value() == a;
+    }
+    b->bind(a);
+    return true;
+}
 
 template <typename GROUND_TYPE, typename ... Ts, size_t... Is>
 bool bind(const GROUND_TYPE &fact, const tuple<Ts...> &atom, index_sequence<Is...>)

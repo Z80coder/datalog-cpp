@@ -1,6 +1,3 @@
-// Let Catch provide main():
-#define CATCH_CONFIG_MAIN
-
 #include "catch.hpp"
 #include "Variable.h"
 
@@ -18,9 +15,9 @@ bool boundVariableTest() {
 }
 
 TEST_CASE( "An new variable is unbound", "[variable]" ) {
-    REQUIRE( freeVariableTest() );
+    REQUIRE( freeVariableTest() == true );
 }
 
 TEST_CASE( "A variable with a value is bound", "[variable]" ) {
-    REQUIRE( freeVariableTest() );
+    REQUIRE( boundVariableTest() == true );
 }

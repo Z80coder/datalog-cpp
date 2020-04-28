@@ -6,7 +6,7 @@
         {
             "label": "build",
             "type": "shell",
-            "command": "mkdir -p build; cd build; cmake ../src; make",
+            "command": "cd build; make",
             "problemMatcher": [
                 "$gcc"
             ],

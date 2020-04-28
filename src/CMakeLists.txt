@@ -25,3 +25,8 @@ set(CMAKE_CXX_STANDARD 17)
 add_executable(types_test ../tests/types_test.cpp)
 target_include_directories(types_test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_definitions(types_test PUBLIC UNIX)
+
+# variable_test target
+add_executable(variable_test ../tests/variable_test.cpp)
+target_include_directories(variable_test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_compile_definitions(variable_test PUBLIC UNIX)

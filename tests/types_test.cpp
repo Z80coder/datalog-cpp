@@ -1,4 +1,8 @@
-#include <Datalog.h>
+// Let Catch provide main():
+#define CATCH_CONFIG_MAIN
+
+#include "catch.hpp"
+#include "Datalog.h"
 
 using namespace datalog;
 
@@ -109,7 +113,6 @@ bool test2()
     return true;
 }
 
-#if 1
 bool po1()
 {
     typedef unsigned int Number;
@@ -193,9 +196,9 @@ bool po1()
     const auto& computedA = convert<A>(temp);
     //return convert<RELATION_TYPE>(getTrackedSet<RELATION_TYPE>());
 
-    cout << "result = ";
-    operator<< <A>(cout, computedA);
-    cout << endl;
+//    cout << "result = ";
+//    operator<< <A>(cout, computedA);
+//   cout << endl;
 
     delete a;
     delete b;
@@ -215,7 +218,6 @@ bool po1()
     
     return computedA == aOut;
 }
-#endif
 
 bool test4()
 {
@@ -312,21 +314,9 @@ bool test4()
     return true;
 }
 
-int main()
-{
-    bool ok1 = test1();
-    bool ok2 = test2();
-#if 1
-    bool ok3 = po1();
-    bool ok4 = test4();
-
-    if (!(ok1 and ok2 and ok3 and ok4)) {
-        cout << "FAIL" << endl;
-        return 1;
-    } else {
-        cout << "PASSED" << endl;
-        return 0;
-    }
-#endif
-    return 1;
+TEST_CASE( "toy-examples", "[types-test]" ) {
+    REQUIRE( test1() );
+    REQUIRE( test2() );
+    REQUIRE( po1() );
+    REQUIRE( test4() );
 }

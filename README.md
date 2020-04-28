@@ -8,4 +8,6 @@ not yet alpha!
 
 ## Documentation
 
+- [Doxygen code documentation](https://z80coder.github.io/datalog-cpp/)
+- [How to build](./docs/build.md)
 - [Quick git how to](./docs/git-how-to.md)

@@ -11,13 +11,15 @@ bool freeVariableTest() {
 bool boundVariableTest() {
     Variable<int> intVar;
     intVar.bind(0);
-    return intVar.isBound();
+    // break this
+    //return intVar.isBound();
+    return !intVar.isBound();
 }
 
 TEST_CASE( "An new variable is unbound", "[variable]" ) {
-    REQUIRE( freeVariableTest() );
+    REQUIRE( freeVariableTest() == true );
 }
 
 TEST_CASE( "A variable with a value is bound", "[variable]" ) {
-    REQUIRE( freeVariableTest() );
+    REQUIRE( boundVariableTest() == true );
 }

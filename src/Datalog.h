@@ -12,44 +12,49 @@
 #include <tuple>
 
 #include "tuple_hash.h"
-#include "Variable.h"
+#include "variable.h"
+#include "tuple_binding.h"
 
 namespace datalog
 {
 
 using namespace std;
 
+/**
+ * @brief create a new variable
+ * 
+ * @tparam T 
+ * @return Variable<T>* 
+ */
 template <typename T>
 Variable<T> *var()
 {
     return new Variable<T>();
 }
 
+/**
+ * @brief get the value of a variable
+ * 
+ * @tparam T 
+ * @param t 
+ * @return T 
+ */
 template <typename T>
 T val(Variable<T> *t)
 {
     return t->value();
 }
 
+/**
+ * @brief delete a variable
+ * 
+ * @tparam T 
+ * @param v 
+ */
 template <typename T>
 void deleteVar(Variable<T> *v)
 {
     delete v;
-}
-
-template <typename T>
-void unbind(Variable<T> *t)
-{
-    t->unbind();
-}
-
-template <typename T>
-void unbind(const T &t) {}
-
-template <typename... Ts>
-void unbind(const tuple<Ts...> &tuple)
-{
-    apply([](auto &&... args) { ((unbind(args), ...)); }, tuple);
 }
 
 template <typename T>

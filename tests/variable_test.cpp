@@ -1,5 +1,5 @@
 #include "catch.hpp"
-#include "Variable.h"
+#include "variable.h"
 
 using namespace datalog;
 

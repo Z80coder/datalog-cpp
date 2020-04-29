@@ -1,6 +1,14 @@
 # Overview of the build system
 `datalog-cpp` uses the [CMake](www.cmake.org) build tool to generate build files for other build systems. Currently, building using clang and gcc with Makefiles are supported.
 
+You `valgrind` installed to run memory checks: `sudo apt install valgrind`
+
+To run all regression tests:
+```
+cd tests
+./run_tests.sh
+```
+ 
 # Building with Makefiles
 From the command line inside a git clone, run the following:
 ```

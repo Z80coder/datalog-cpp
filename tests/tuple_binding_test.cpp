@@ -15,7 +15,14 @@ bool unbindTest()
     return returnVal;
 }
 
+bool leakTest() {
+    double* leak = new double[10];
+    std::cout << "Hello!" << std::endl;
+    return true;
+}
+
 TEST_CASE("tuple binding test", "[tuple-binding]")
 {
     REQUIRE(unbindTest());
+    REQUIRE(leakTest());
 }

@@ -18,6 +18,7 @@ bool unbindTest()
 bool leakTest() {
     double* leak = new double[10];
     std::cout << "Hello!" << std::endl;
+    delete leak;
     return true;
 }
 

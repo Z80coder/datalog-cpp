@@ -5,6 +5,8 @@
 
 namespace datalog {
 
+// TODO: reify the concept of a tuple of values and pointers to Variables
+
 /**
  * @brief unbind a variable
  * 
@@ -18,7 +20,7 @@ void unbind(Variable<T> *t)
 }
 
 /**
- * @brief unbind no-operation for types that are not variables
+ * @brief unbind no-operation for types that are not variables (i.e. values)
  * 
  * @tparam T 
  * @param t 

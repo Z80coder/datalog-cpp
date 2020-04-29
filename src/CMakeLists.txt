@@ -35,3 +35,9 @@ add_executable(variable_test ../tests/variable_test.cpp)
 target_include_directories(variable_test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(variable_test tests_main)
 target_compile_definitions(variable_test PUBLIC UNIX)
+
+# tuple_binding_test target
+add_executable(tuple_binding_test ../tests/tuple_binding_test.cpp)
+target_include_directories(tuple_binding_test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(tuple_binding_test tests_main)
+target_compile_definitions(tuple_binding_test PUBLIC UNIX)

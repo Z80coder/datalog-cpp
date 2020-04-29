@@ -20,6 +20,8 @@ namespace datalog
 
 using namespace std;
 
+// High-level API functions
+
 /**
  * @brief create a new variable
  * 
@@ -56,6 +58,8 @@ void deleteVar(Variable<T> *v)
 {
     delete v;
 }
+
+// TODO: all functions below here to be refactored into separate files
 
 template <typename T>
 bool bind(const T &a, const T &b)

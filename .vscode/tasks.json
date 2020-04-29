@@ -7,9 +7,10 @@
             "label": "build",
             "type": "shell",
             "command": "cd build; make",
-            "problemMatcher": [
-                "$gcc"
-            ],
+            "problemMatcher": {
+                "base": "$gcc",
+                "fileLocation": ["relative", "../"]
+            },
             "group": {
                 "kind": "build",
                 "isDefault": true

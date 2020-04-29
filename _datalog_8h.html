@@ -83,24 +83,26 @@ $(function() {
 <code>#include &lt;iostream&gt;</code><br />
 <code>#include &lt;tuple&gt;</code><br />
 <code>#include &quot;<a class="el" href="tuple__hash_8h_source.html">tuple_hash.h</a>&quot;</code><br />
-<code>#include &quot;<a class="el" href="_variable_8h_source.html">Variable.h</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="variable_8h_source.html">variable.h</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="tuple__binding_8h_source.html">tuple_binding.h</a>&quot;</code><br />
 </div><div class="textblock"><div class="dynheader">
 Include dependency graph for Datalog.h:</div>
 <div class="dyncontent">
 <div class="center"><img src="_datalog_8h__incl.png" border="0" usemap="#src_2_datalog_8h" alt=""/></div>
 <map name="src_2_datalog_8h" id="src_2_datalog_8h">
-<area shape="rect" title=" " alt="" coords="409,5,508,32"/>
+<area shape="rect" title=" " alt="" coords="457,5,556,32"/>
 <area shape="rect" title=" " alt="" coords="5,80,45,107"/>
 <area shape="rect" title=" " alt="" coords="69,80,173,107"/>
 <area shape="rect" title=" " alt="" coords="198,80,266,107"/>
-<area shape="rect" title=" " alt="" coords="589,155,656,181"/>
+<area shape="rect" title=" " alt="" coords="576,229,643,256"/>
 <area shape="rect" title=" " alt="" coords="341,80,395,107"/>
 <area shape="rect" title=" " alt="" coords="419,80,498,107"/>
 <area shape="rect" title=" " alt="" coords="522,80,587,107"/>
 <area shape="rect" title=" " alt="" coords="612,80,684,107"/>
 <area shape="rect" title=" " alt="" coords="708,80,759,107"/>
 <area shape="rect" href="tuple__hash_8h.html" title=" " alt="" coords="783,80,878,107"/>
-<area shape="rect" href="_variable_8h.html" title=" " alt="" coords="902,80,981,107"/>
+<area shape="rect" href="variable_8h.html" title=" " alt="" coords="877,155,955,181"/>
+<area shape="rect" href="tuple__binding_8h.html" title=" " alt="" coords="954,80,1062,107"/>
 </map>
 </div>
 </div>
@@ -146,22 +148,16 @@ Namespaces</h2></td></tr>
 Functions</h2></td></tr>
 <tr class="memitem:a417f9b9741e9b61e6b20d9c52191685b"><td class="memTemplParams" colspan="2">template&lt;typename T &gt; </td></tr>
 <tr class="memitem:a417f9b9741e9b61e6b20d9c52191685b"><td class="memTemplItemLeft" align="right" valign="top">Variable&lt; T &gt; *&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespacedatalog.html#a417f9b9741e9b61e6b20d9c52191685b">datalog::var</a> ()</td></tr>
+<tr class="memdesc:a417f9b9741e9b61e6b20d9c52191685b"><td class="mdescLeft">&#160;</td><td class="mdescRight">create a new variable  <a href="namespacedatalog.html#a417f9b9741e9b61e6b20d9c52191685b">More...</a><br /></td></tr>
 <tr class="separator:a417f9b9741e9b61e6b20d9c52191685b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1b657030dc65c11e9a8a75dc5d93f3d2"><td class="memTemplParams" colspan="2">template&lt;typename T &gt; </td></tr>
 <tr class="memitem:a1b657030dc65c11e9a8a75dc5d93f3d2"><td class="memTemplItemLeft" align="right" valign="top">T&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespacedatalog.html#a1b657030dc65c11e9a8a75dc5d93f3d2">datalog::val</a> (Variable&lt; T &gt; *t)</td></tr>
+<tr class="memdesc:a1b657030dc65c11e9a8a75dc5d93f3d2"><td class="mdescLeft">&#160;</td><td class="mdescRight">get the value of a variable  <a href="namespacedatalog.html#a1b657030dc65c11e9a8a75dc5d93f3d2">More...</a><br /></td></tr>
 <tr class="separator:a1b657030dc65c11e9a8a75dc5d93f3d2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9d68f6a6de3ce39f8d0a67f7fbb6fb0b"><td class="memTemplParams" colspan="2">template&lt;typename T &gt; </td></tr>
 <tr class="memitem:a9d68f6a6de3ce39f8d0a67f7fbb6fb0b"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespacedatalog.html#a9d68f6a6de3ce39f8d0a67f7fbb6fb0b">datalog::deleteVar</a> (Variable&lt; T &gt; *v)</td></tr>
+<tr class="memdesc:a9d68f6a6de3ce39f8d0a67f7fbb6fb0b"><td class="mdescLeft">&#160;</td><td class="mdescRight">delete a variable  <a href="namespacedatalog.html#a9d68f6a6de3ce39f8d0a67f7fbb6fb0b">More...</a><br /></td></tr>
 <tr class="separator:a9d68f6a6de3ce39f8d0a67f7fbb6fb0b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1e9ab7444b4667aa70988ed907755482"><td class="memTemplParams" colspan="2">template&lt;typename T &gt; </td></tr>
-<tr class="memitem:a1e9ab7444b4667aa70988ed907755482"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespacedatalog.html#a1e9ab7444b4667aa70988ed907755482">datalog::unbind</a> (Variable&lt; T &gt; *t)</td></tr>
-<tr class="separator:a1e9ab7444b4667aa70988ed907755482"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aff960f716fe6b18bfd8888082d6e17d3"><td class="memTemplParams" colspan="2">template&lt;typename T &gt; </td></tr>
-<tr class="memitem:aff960f716fe6b18bfd8888082d6e17d3"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespacedatalog.html#aff960f716fe6b18bfd8888082d6e17d3">datalog::unbind</a> (const T &amp;t)</td></tr>
-<tr class="separator:aff960f716fe6b18bfd8888082d6e17d3"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac0c6dc70ec4fb5f991809ca57ea3c915"><td class="memTemplParams" colspan="2">template&lt;typename... Ts&gt; </td></tr>
-<tr class="memitem:ac0c6dc70ec4fb5f991809ca57ea3c915"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespacedatalog.html#ac0c6dc70ec4fb5f991809ca57ea3c915">datalog::unbind</a> (const tuple&lt; Ts... &gt; &amp;tuple)</td></tr>
-<tr class="separator:ac0c6dc70ec4fb5f991809ca57ea3c915"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3bd504a9e3a4fce66f8b447452f0d71a"><td class="memTemplParams" colspan="2">template&lt;typename T &gt; </td></tr>
 <tr class="memitem:a3bd504a9e3a4fce66f8b447452f0d71a"><td class="memTemplItemLeft" align="right" valign="top">bool&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespacedatalog.html#a3bd504a9e3a4fce66f8b447452f0d71a">datalog::bind</a> (const T &amp;a, const T &amp;b)</td></tr>
 <tr class="separator:a3bd504a9e3a4fce66f8b447452f0d71a"><td class="memSeparator" colspan="2">&#160;</td></tr>

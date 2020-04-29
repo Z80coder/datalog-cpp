@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=9"/>
 <meta name="generator" content="Doxygen 1.8.18"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>datalog-cpp: src/Variable.h Source File</title>
+<title>datalog-cpp: src/variable.h Source File</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -66,10 +66,10 @@ $(function() {
 </div><!-- top -->
 <div class="header">
   <div class="headertitle">
-<div class="title">Variable.h</div>  </div>
+<div class="title">variable.h</div>  </div>
 </div><!--header-->
 <div class="contents">
-<a href="_variable_8h.html">Go to the documentation of this file.</a><div class="fragment"><div class="line"><a name="l00001"></a><span class="lineno">    1</span>&#160;<span class="preprocessor">#ifndef VARIABLE_H</span></div>
+<a href="variable_8h.html">Go to the documentation of this file.</a><div class="fragment"><div class="line"><a name="l00001"></a><span class="lineno">    1</span>&#160;<span class="preprocessor">#ifndef VARIABLE_H</span></div>
 <div class="line"><a name="l00002"></a><span class="lineno">    2</span>&#160;<span class="preprocessor">#define VARIABLE_H</span></div>
 <div class="line"><a name="l00003"></a><span class="lineno">    3</span>&#160; </div>
 <div class="line"><a name="l00004"></a><span class="lineno">    4</span>&#160;<span class="preprocessor">#include &lt;optional&gt;</span></div>
@@ -106,13 +106,13 @@ $(function() {
 <div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160; </div>
 <div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160;<span class="preprocessor">#endif</span></div>
 </div><!-- fragment --></div><!-- contents -->
-<div class="ttc" id="astructdatalog_1_1_variable_html"><div class="ttname"><a href="structdatalog_1_1_variable.html">datalog::Variable</a></div><div class="ttdoc">Represents a datalog variable that is either free or bound to a value.</div><div class="ttdef"><b>Definition:</b> <a href="_variable_8h_source.html#l00016">Variable.h:17</a></div></div>
-<div class="ttc" id="anamespacedatalog_html"><div class="ttname"><a href="namespacedatalog.html">datalog</a></div><div class="ttdef"><b>Definition:</b> <a href="_datalog_8h_source.html#l00017">Datalog.h:18</a></div></div>
-<div class="ttc" id="astructdatalog_1_1_variable_html_a0061387a3a1fe27f72e18c2f5a5fa5b6"><div class="ttname"><a href="structdatalog_1_1_variable.html#a0061387a3a1fe27f72e18c2f5a5fa5b6">datalog::Variable::isBound</a></div><div class="ttdeci">bool isBound() const</div><div class="ttdoc">checks whether this variable is free or bound</div><div class="ttdef"><b>Definition:</b> <a href="_variable_8h_source.html#l00043">Variable.h:43</a></div></div>
+<div class="ttc" id="astructdatalog_1_1_variable_html"><div class="ttname"><a href="structdatalog_1_1_variable.html">datalog::Variable</a></div><div class="ttdoc">Represents a datalog variable that is either free or bound to a value.</div><div class="ttdef"><b>Definition:</b> <a href="variable_8h_source.html#l00016">variable.h:17</a></div></div>
+<div class="ttc" id="anamespacedatalog_html"><div class="ttname"><a href="namespacedatalog.html">datalog</a></div><div class="ttdef"><b>Definition:</b> <a href="_datalog_8h_source.html#l00018">Datalog.h:19</a></div></div>
+<div class="ttc" id="astructdatalog_1_1_variable_html_a0061387a3a1fe27f72e18c2f5a5fa5b6"><div class="ttname"><a href="structdatalog_1_1_variable.html#a0061387a3a1fe27f72e18c2f5a5fa5b6">datalog::Variable::isBound</a></div><div class="ttdeci">bool isBound() const</div><div class="ttdoc">checks whether this variable is free or bound</div><div class="ttdef"><b>Definition:</b> <a href="variable_8h_source.html#l00043">variable.h:43</a></div></div>
 <div class="ttc" id="anamespacestd_html"><div class="ttname"><a href="namespacestd.html">std</a></div><div class="ttdef"><b>Definition:</b> <a href="tuple__hash_8h_source.html#l00006">tuple_hash.h:6</a></div></div>
-<div class="ttc" id="astructdatalog_1_1_variable_html_a0ded63759c4b57ecb9d5c7887036d862"><div class="ttname"><a href="structdatalog_1_1_variable.html#a0ded63759c4b57ecb9d5c7887036d862">datalog::Variable::unbind</a></div><div class="ttdeci">void unbind()</div><div class="ttdoc">unbinds this variable (making it a free variable)</div><div class="ttdef"><b>Definition:</b> <a href="_variable_8h_source.html#l00032">Variable.h:32</a></div></div>
-<div class="ttc" id="astructdatalog_1_1_variable_html_adc7e78a3a836560fd7362f186d68603e"><div class="ttname"><a href="structdatalog_1_1_variable.html#adc7e78a3a836560fd7362f186d68603e">datalog::Variable::bind</a></div><div class="ttdeci">void bind(const T &amp;value)</div><div class="ttdoc">bind this variable to the supplied value (making it an unfree variable)</div><div class="ttdef"><b>Definition:</b> <a href="_variable_8h_source.html#l00023">Variable.h:23</a></div></div>
-<div class="ttc" id="astructdatalog_1_1_variable_html_a86513cf77e59f60381bc40c6bc4f6368"><div class="ttname"><a href="structdatalog_1_1_variable.html#a86513cf77e59f60381bc40c6bc4f6368">datalog::Variable::value</a></div><div class="ttdeci">const T &amp; value() const</div><div class="ttdoc">returns the bound value (if not bound then throws an exception)</div><div class="ttdef"><b>Definition:</b> <a href="_variable_8h_source.html#l00053">Variable.h:53</a></div></div>
+<div class="ttc" id="astructdatalog_1_1_variable_html_a0ded63759c4b57ecb9d5c7887036d862"><div class="ttname"><a href="structdatalog_1_1_variable.html#a0ded63759c4b57ecb9d5c7887036d862">datalog::Variable::unbind</a></div><div class="ttdeci">void unbind()</div><div class="ttdoc">unbinds this variable (making it a free variable)</div><div class="ttdef"><b>Definition:</b> <a href="variable_8h_source.html#l00032">variable.h:32</a></div></div>
+<div class="ttc" id="astructdatalog_1_1_variable_html_adc7e78a3a836560fd7362f186d68603e"><div class="ttname"><a href="structdatalog_1_1_variable.html#adc7e78a3a836560fd7362f186d68603e">datalog::Variable::bind</a></div><div class="ttdeci">void bind(const T &amp;value)</div><div class="ttdoc">bind this variable to the supplied value (making it an unfree variable)</div><div class="ttdef"><b>Definition:</b> <a href="variable_8h_source.html#l00023">variable.h:23</a></div></div>
+<div class="ttc" id="astructdatalog_1_1_variable_html_a86513cf77e59f60381bc40c6bc4f6368"><div class="ttname"><a href="structdatalog_1_1_variable.html#a86513cf77e59f60381bc40c6bc4f6368">datalog::Variable::value</a></div><div class="ttdeci">const T &amp; value() const</div><div class="ttdoc">returns the bound value (if not bound then throws an exception)</div><div class="ttdef"><b>Definition:</b> <a href="variable_8h_source.html#l00053">variable.h:53</a></div></div>
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
 Generated by &#160;<a href="http://www.doxygen.org/index.html">

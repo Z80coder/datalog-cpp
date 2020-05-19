@@ -12,6 +12,7 @@ bool unbindTest()
     v->unbind();
     bool returnVal = !get<0>(t)->isBound();
     deleteVar(v);
+    // add a comment to force test CodeQL analysis
     return returnVal;
 }
 
